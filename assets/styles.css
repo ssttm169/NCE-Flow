@@ -1,0 +1,165 @@
+/* Modern NCE UI — Apple-inspired, minimal, adaptive */
+:root {
+  --bg: #0a0a0c;
+  --surface: #0f1014;
+  --card: #14161b;
+  --text: #e7e7ea;
+  --muted: #a1a1a7;
+  --border: rgba(255,255,255,0.08);
+  --shadow: 0 10px 30px rgba(0,0,0,0.4);
+  --accent: #0a84ff; /* iOS Blue */
+  --accent-2: #7c4dff; /* purple */
+  --radius: 14px;
+  --control-h: 34px; /* unified control height */
+}
+
+@media (prefers-color-scheme: light) {
+  :root { --bg:#f5f5f7; --surface:#f8f8fa; --card:#ffffff; --text:#1d1d1f; --muted:#6e6e73; --border:rgba(0,0,0,0.08); --shadow:0 12px 30px rgba(0,0,0,0.08);} 
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Arial,"Microsoft YaHei",sans-serif;
+  color:var(--text);
+  background: linear-gradient(180deg,
+               color-mix(in srgb, var(--bg) 98%, var(--accent) 2%),
+               color-mix(in srgb, var(--bg) 98%, var(--accent-2) 2%)) fixed;
+}
+
+/* Subtle animated ambient layer with smooth fade-in */
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:-1;
+  background: radial-gradient(900px 600px at 15% 5%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+              radial-gradient(900px 600px at 85% 0%, color-mix(in srgb, var(--accent-2) 8%, transparent), transparent 60%);
+  opacity:0; animation: bgFade .9s ease-out forwards;
+}
+
+@keyframes bgFade { from { opacity:0 } to { opacity:.8 } }
+
+@media (prefers-reduced-motion: reduce){
+  body::before{ animation: none; opacity:.6 }
+}
+
+.container{max-width:1120px;margin:0 auto;padding:0 18px}
+
+/* Header / Hero */
+.hero{padding:48px 0 20px;text-align:center}
+.hero .brand{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.hero h1{font-size:48px;line-height:1.06;letter-spacing:-.02em;margin:0 0 8px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--text) 85%, var(--accent) 15%), color-mix(in srgb, var(--accent-2) 50%, var(--text) 50%));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.hero p{color:var(--muted);margin:0;font-size:14px}
+.hero .subtitle{margin-top:6px;margin-bottom:10px;font-size:13px;color:var(--muted);letter-spacing:0.02em}
+/* badges removed per design feedback */
+
+/* Back/Speed buttons inline with player — unify control height with audio */
+.back-inline{display:inline-flex;align-items:center;gap:6px;height:var(--control-h);padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);color:inherit;flex:0 0 auto;}
+.back-inline svg{width:14px;height:14px;fill:currentColor}
+
+/* Segmented control */
+.segmented{display:inline-flex;gap:6px;background:color-mix(in srgb, var(--bg) 70%, transparent);border:1px solid var(--border);border-radius:999px;padding:4px;margin-top:14px;backdrop-filter:saturate(120%) blur(10px)}
+.segmented .seg{appearance:none;border:0;background:transparent;color:var(--text);font-size:12px;padding:8px 12px;border-radius:999px;cursor:pointer;text-decoration:none;transition:background .15s ease, color .15s ease}
+.segmented .seg.active{background:color-mix(in srgb, var(--accent) 20%, var(--card));box-shadow:var(--shadow)}
+/* tiny segmented for minimal toolbar switches */
+.segmented.tiny{padding:2px;gap:2px}
+.segmented.tiny .seg{font-size:11px;padding:6px 8px}
+
+/* Smaller top tabs for book switch */
+.segmented.tabs{padding:4px; gap:6px; margin-top:14px}
+.segmented.tabs .seg{font-size:12px; padding:8px 12px}
+
+@media (max-width: 768px){
+  .hero{padding:36px 0 16px}
+  .hero h1{font-size:40px}
+  .segmented.tabs .seg{font-size:12px; padding:8px 12px}
+}
+
+/* Book cards grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;padding:26px 0 64px}
+.card{position:relative;border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .2s ease, box-shadow .2s ease}
+.card:hover{transform:translateY(-4px)}
+.card img{width:100%;height:160px;object-fit:cover;display:block;opacity:.9}
+.card .body{padding:14px 14px 16px}
+.card .title{font-weight:700;margin:6px 0 4px}
+.card .sub{font-size:12px;color:var(--muted)}
+
+/* Lessons grid */
+.lessons{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;padding:10px 0 40px}
+.lesson-item{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;display:flex;gap:10px;align-items:center;color:inherit;text-decoration:none;transition:transform .15s ease}
+.lesson-item:hover{transform:translateY(-2px)}
+.lesson-num{font-weight:700;color:var(--accent)}
+
+/* Favorite star on lesson item */
+.lesson-item{ position:relative }
+.lesson-item .fav{ position:absolute; top:8px; right:10px; width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; color:var(--muted); opacity:.8; cursor:pointer; user-select:none; }
+.lesson-item .fav:hover{ opacity:1 }
+.lesson-item .fav.active{ color:var(--accent); opacity:1 }
+.lesson-item .fav svg{ width:16px; height:16px; fill:currentColor }
+
+/* Lesson page */
+.toolbar{position:sticky;top:0;z-index:10;background:transparent;padding:6px 0 4px;border-bottom:none}
+.toolbar .row{display:flex;align-items:center;justify-content:flex-end;gap:10px}
+.toolbar .info{display:flex;align-items:center;gap:10px}
+.toolbar .title{font-weight:700}
+.toolbar .sub{font-size:12px;color:var(--muted)}
+.controls{display:flex;align-items:center;gap:8px}
+.btn{appearance:none;border:1px solid var(--border);background:color-mix(in srgb, var(--card) 90%, transparent);backdrop-filter:saturate(120%) blur(10px);color:inherit;border-radius:10px;padding:6px 10px;cursor:pointer}
+.btn:hover{transform:translateY(-1px)}
+
+.sentences{padding:12px 0 22px}
+.sentence{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px;margin:10px 0;cursor:pointer;transition:transform .12s ease}
+.sentence:hover{transform:translateY(-2px)}
+.sentence.active{border-left:4px solid var(--accent);background:color-mix(in srgb, var(--accent) 10%, var(--card))}
+.en{font-weight:700;font-size:18px}
+.cn{font-size:13px;color:var(--muted);margin-top:4px}
+.lang-en .cn{display:none}
+.lang-cn .en{display:none}
+
+/* Audio */
+.player{display:flex; align-items:center; gap:8px; margin:6px auto 10px; padding:0; background:transparent; border:none; box-shadow:none; min-height:var(--control-h);}
+.player audio{display:block; flex:1; width:100%; max-width:780px; height:var(--control-h); accent-color: var(--accent); background: transparent;}
+
+/* Lesson bottom navigation */
+.lesson-nav{display:flex; justify-content:space-between; gap:10px; padding:6px 0 16px; max-width:780px; margin:0 auto}
+.btn-nav{display:inline-flex; align-items:center; justify-content:center; padding:8px 14px; min-width:96px;
+  border-radius:999px; border:1px solid var(--border); background:var(--surface); color:inherit; text-decoration:none; box-shadow:var(--shadow);
+  transition:transform .15s ease, box-shadow .15s ease}
+.btn-nav:hover{transform:translateY(-2px); box-shadow:var(--shadow)}
+
+/* Footer */
+footer{padding:20px 0;color:var(--muted);text-align:center}
+footer p{margin:4px 0; text-align:center}
+.repo{margin-bottom:4px}
+
+/* Sections on index (e.g., recents) */
+.section{ padding:6px 0 8px }
+.section-title{ font-size:12px; color:var(--muted); letter-spacing:.02em; margin:4px 2px 8px; }
+
+/* Last seen card */
+.last-seen{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:var(--radius);
+  border:1px solid var(--border); background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter:saturate(120%) blur(10px);
+  box-shadow: var(--shadow); text-decoration:none; color:inherit; transition:transform .15s ease }
+.last-seen:hover{ transform:translateY(-1px) }
+.last-left{ display:flex; align-items:center; gap:10px; min-width:0 }
+.last-icon{ width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; color:var(--muted); opacity:.9 }
+.last-icon svg{ width:14px; height:14px; fill:currentColor }
+.last-meta{ display:flex; flex-direction:column; gap:2px; min-width:0 }
+.last-title{ font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.last-sub{ font-size:12px; color:var(--muted) }
+.last-cta{ flex:0 0 auto; color:var(--muted) }
+.last-cta .chev{ display:inline-block; transform:translateX(0); transition:transform .15s ease; font-size:16px }
+.last-seen:hover .last-cta .chev{ transform:translateX(2px) }
+
+/* Links */
+a{color:inherit}
+a{text-decoration:none}
+
+/* GitHub icon link */
+.gh-link svg{width:18px;height:18px;fill:currentColor;opacity:.8;vertical-align:middle;transition:opacity .2s ease, transform .2s ease}
+.gh-link:hover svg{opacity:1;transform:translateY(-1px)}
+
+/* Smooth theme transitions for surfaces */
+body, .card, .lesson-item, .sentence{ transition: background-color .35s ease, color .35s ease, box-shadow .35s ease, border-color .35s ease; }
