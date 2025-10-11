@@ -1,46 +1,62 @@
-# <div align="center">NCE Flow</div>
+<p align="center">
+  <a href="https://nce.luzhenhua.cn">
+    <img src="https://github.com/luzhenhua/NCE-Flow/assets/your_logo.png" alt="NCE Flow" width="120">
+  </a>
+</p>
 
-<div align="center">
+<h1 align="center">NCE Flow</h1>
 
-**新概念英语在线点读，点句即读、连续播放**
+<p align="center">
+  <strong>新概念英语在线点读，点句即读、连续播放</strong>
+</p>
 
-[![GitHub stars](https://img.shields.io/github/stars/luzhenhua/NCE-Flow.svg?style=social&label=Star)](https://github.com/luzhenhua/NCE-Flow)
-[![GitHub forks](https://img.shields.io/github/forks/luzhenhua/NCE-Flow.svg?style=social&label=Fork)](https://github.com/luzhenhua/NCE-Flow)
-[![GitHub release](https://img.shields.io/github/release/luzhenhua/NCE-Flow.svg)](https://github.com/luzhenhua/NCE-Flow/releases)
-[![License](https://img.shields.io/github/license/luzhenhua/NCE-Flow.svg)](LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/luzhenhua/NCE-Flow)](https://github.com/luzhenhua/NCE-Flow/issues)
+<p align="center">
+  <a href="https://nce.luzhenhua.cn">在线体验</a> •
+  <a href="https://github.com/luzhenhua/NCE-Flow/releases">下载完整版</a> •
+  <a href="https://github.com/luzhenhua/NCE-Flow/issues">问题反馈</a>
+</p>
 
-[![Star History Chart](https://api.star-history.com/svg?repos=luzhenhua/NCE-Flow&type=Date)](https://star-history.com/#luzhenhua/NCE-Flow&Date)
+<p align="center">
+  <img src="https://img.shields.io/github/stars/luzhenhua/NCE-Flow?style=social" alt="GitHub stars">
+  <img src="https://img.shields.io/github/forks/luzhenhua/NCE-Flow?style=social" alt="GitHub forks">
+  <img src="https://img.shields.io/github/release/luzhenhua/NCE-Flow" alt="GitHub release">
+  <img src="https://img.shields.io/github/license/luzhenhua/NCE-Flow" alt="License">
+  <img src="https://img.shields.io/github/issues/luzhenhua/NCE-Flow" alt="GitHub issues">
+</p>
 
-**简约 · 高效 · 专注｜零依赖 · 纯静态 · 即开即用**
-
-[在线体验](https://nce.luzhenhua.cn) · [下载完整版](https://github.com/luzhenhua/NCE-Flow/releases) · [使用文档](#-使用指南) · [问题反馈](https://github.com/luzhenhua/NCE-Flow/issues)
-
-</div>
+<p align="center">
+  <em>简约 · 高效 · 专注｜零依赖 · 纯静态 · 即开即用</em>
+</p>
 
 ---
 
-## 核心特性
+## 功能特性
 
-### 智能点读
-- **句子级点读**：点击任一句子，从该句开始连续播放
+### 🎯 智能点读系统
+- **句子级点读**：点击任意句子，从该句开始连续播放
 - **自动跟随**：播放时自动高亮并居中当前句子
-- **模式切换**：支持连读/点读两种播放模式
+- **播放控制**：连读/点读模式自由切换
+- **倍速调节**：0.75x - 2.5x 播放速度可调
 - **断点续播**：智能记忆上次学习位置
 
-### 多语言视图
+### 🌐 多语言支持
 - **EN 模式**：纯英文显示
 - **EN+CN 模式**：双语对照显示
 - **CN 模式**：纯中文显示
 - **设置持久化**：语言偏好自动保存
 
-### 现代化界面
+### 🎨 现代化界面
 - **Apple 风格**：采用 iOS 设计语言，简约优雅
 - **深浅色主题**：自动适配系统主题，护眼舒适
 - **流畅动画**：精心设计的过渡效果和微交互
 - **响应式设计**：完美适配桌面、平板、手机
 
-### 技术优势
+### 📚 学习管理
+- **课程收藏**：标记重要课程，快速访问
+- **学习记录**：记录学习历史和进度
+- **课程导航**：便捷的上一课/下一课切换
+
+### ⚡ 技术优势
 - **零依赖**：纯 HTML/CSS/JavaScript，无需框架
 - **即开即用**：解压后直接打开 `index.html` 即可
 - **完整音频**：NCE1-NCE4 四册完整音频资源
@@ -48,21 +64,14 @@
 
 ---
 
-## 界面预览
+## 演示截图
 
-### 首页导航
 <p align="center">
-  <img src="https://github.com/luzhenhua/NCE-Flow/assets/your_screenshot_1.png" alt="首页预览" width="800">
+  <img src="https://github.com/luzhenhua/NCE-Flow/assets/your_screenshot_1.png" alt="NCE Flow 首页" width="800">
 </p>
 
-### 课文点读
 <p align="center">
-  <img src="https://github.com/luzhenhua/NCE-Flow/assets/your_screenshot_2.png" alt="课文点读预览" width="800">
-</p>
-
-### 功能演示
-<p align="center">
-  <img src="https://github.com/luzhenhua/NCE-Flow/assets/your_demo.gif" alt="功能演示" width="800">
+  <img src="https://github.com/luzhenhua/NCE-Flow/assets/your_screenshot_2.png" alt="NCE Flow 课文点读" width="800">
 </p>
 
 ---
@@ -157,21 +166,30 @@ NCE-Flow/
 
 ---
 
-## 更新日志
+## 版本历史
 
-### v1.0.0 (2025-01-12)
-- **正式发布**：完整功能版本
-- **完整音频**：NCE1-NCE4 四册音频资源
-- **现代 UI**：Apple 风格界面设计
-- **收藏功能**：课程收藏和学习记录
-- **断点续播**：智能记忆学习进度
-- **多语言**：EN/EN+CN/CN 三态切换
+### v1.0.0
+- **正式发布**：UI 全面调整，界面更加现代化
+- **新增功能**：句子跟随/不跟随选项
+- **完善体验**：整体交互优化和细节改进
 
-### 未来规划
-- **移动端优化**：PWA 支持，离线使用
-- **学习游戏化**：积分系统，成就徽章
-- **学习统计**：学习时长、进度分析
-- **多用户支持**：账户系统，数据同步
+### v0.0.4
+- **学习记录**：记录学习历史和上次观看位置
+- **用户体验**：优化首页显示上次学习进度
+
+### v0.0.3
+- **课程收藏**：支持收藏重要课程
+- **播放模式**：新增点读/连读设置功能
+- **界面优化**：改进收藏按钮和播放控制
+
+### v0.0.2
+- **断点续播**：智能记忆上次播放位置
+- **倍速功能**：支持 0.75x - 2.5x 播放速度调节
+
+### v0.0.1
+- **基础功能**：EN/EN+CN/CN 三态语言切换
+- **完整资源**：NCE1-NCE4 四册音频资源
+- **核心体验**：句子级点读和连续播放
 
 ---
 
@@ -234,3 +252,13 @@ NCE-Flow/
 Made with ❤️ by [Luzhenhua](https://luzhenhua.cn)
 
 </div>
+
+---
+
+## Star 历史
+
+<p align="center">
+  <a href="https://star-history.com/#luzhenhua/NCE-Flow&Date">
+    <img src="https://api.star-history.com/svg?repos=luzhenhua/NCE-Flow&type=Date" alt="Star History Chart">
+  </a>
+</p>
