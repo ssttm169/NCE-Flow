@@ -30,10 +30,15 @@ NCE1..NCE4/      # 音频与 LRC 资源（文件名与 data.json 一致）
 
 请通过下述任一方式获取项目，以确保音频（mp3）完整：
 
-- 推荐：`git clone https://github.com/luzhenhua/NCE-Flow.git`
-- 或从 Releases 页面下载打包好的压缩包（含完整音频）：https://github.com/luzhenhua/NCE-Flow/releases
+- **推荐**：从 [Releases 页面](https://github.com/luzhenhua/NCE-Flow/releases) 下载打包好的压缩包（含完整音频）
+- 或使用：`git clone https://github.com/luzhenhua/NCE-Flow.git`
 
-注意：不要使用 GitHub 页面右上角的 “Code → Download ZIP”。该 ZIP 可能不包含完整的 mp3（或仅为指针文件），会导致页面无声音。
+⚠️ **重要提醒**：不要使用 GitHub 页面右上角的 "Code → Download ZIP"。该 ZIP 可能不包含完整的 mp3（或仅为指针文件），会导致页面无声音。
+
+### 最新版本：v1.0.0
+- [📦 下载 NCE-Flow-v1.0.0.zip (583MB)](https://github.com/luzhenhua/NCE-Flow/releases/download/v1.0.0/NCE-Flow-v1.0.0.zip)
+- 包含新概念英语 1-4 册完整音频和字幕文件
+- 解压后直接用浏览器打开 `index.html` 即可使用
 
 ## 🚀 本地运行
 
