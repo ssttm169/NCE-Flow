@@ -6,6 +6,8 @@
   <link rel="icon" href="favicon.ico">
   <title>NCE Flow · 课本导航</title>
   <link rel="stylesheet" href="assets/styles.css">
+<script>
+  </script>
   <script src="assets/app.js" defer></script>
   <script defer>
     document.addEventListener('DOMContentLoaded',()=>{
@@ -14,22 +16,27 @@
       const lastBox = document.getElementById('lastSeen');
       const header = document.getElementById('bookTitle');
       const segBooks = document.querySelectorAll('[data-book]');
-      const segFilter = document.getElementById('favFilter');
       const FAV_KEY = 'nce_favs';
       const RECENT_KEY = 'nce_recents';
-      const FILTER_KEY = 'nce_filter';
       const getBook = () => (location.hash.slice(1) || 'NCE1').replace(/[^\w\d]/g,'');
       function activeTab(book){ segBooks.forEach(b=>b.classList.toggle('active', b.dataset.book===book)); }
       async function load(){
-        const res = await fetch('static/data.json');
-        const data = await res.json();
-        render(data);
+        try {
+          const res = await fetch('static/data.json');
+          if (!res.ok) {
+            console.error('Failed to fetch data.json:', res.status, res.statusText);
+            document.getElementById('lessons').innerHTML = '<div style="color: red; padding: 20px;">加载课程数据失败，请检查 static/data.json 文件</div>';
+            return;
+          }
+          const data = await res.json();
+          render(data);
+        } catch (error) {
+          console.error('Error loading data:', error);
+          document.getElementById('lessons').innerHTML = '<div style="color: red; padding: 20px;">网络错误或数据格式问题</div>';
+        }
       }
       function getFavs(){ try{ return new Set(JSON.parse(localStorage.getItem(FAV_KEY)||'[]')); }catch(_){ return new Set(); } }
       function saveFavs(set){ try{ localStorage.setItem(FAV_KEY, JSON.stringify(Array.from(set))); }catch(_){ } }
-      function currentFilter(){ const v = localStorage.getItem(FILTER_KEY) || 'all'; return v==='fav'?'fav':'all'; }
-      function setFilter(v){ localStorage.setItem(FILTER_KEY, v); updateFilterUI(); }
-      function updateFilterUI(){ if(!segFilter) return; const v=currentFilter(); segFilter.querySelectorAll('.seg').forEach(s=>s.classList.toggle('active', s.dataset.filter===v)); }
 
       function lessonId(book, lesson){ return `${book}/${lesson.filename}`; }
       function toLessonHref(book, lesson){ return `lesson.html#${book}/${lesson.filename}`; }
@@ -42,10 +49,15 @@
         let lessonNumber = num===1 ? `${idx*2+1}&${idx*2+2}` : String(idx+1);
         return `
           <a class="lesson-item" href="${toLessonHref(book, lesson)}" data-id="${id}">
-            <div class=\"lesson-num\">第${lessonNumber}课</div><div>${lesson.title}</div>
-            <span class=\"fav ${isFav?'active':''}\" role=\"button\" aria-label=\"收藏\" aria-pressed=\"${isFav}\" data-id=\"${id}\">
-              <svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M8 12.027 3.297 14.5l.9-5.243L.1 5.997l5.258-.764L8 0l2.642 5.233 5.258.764-4.097 3.26.9 5.243L8 12.027Z\"></path></svg>
-            </span>
+            <div class="lesson-content">
+              <div class="lesson-num">第${lessonNumber}课</div>
+              <div class="lesson-title">${lesson.title}</div>
+            </div>
+            <button class="fav-btn ${isFav?'active':''}" role="button" aria-label="收藏" aria-pressed="${isFav}" data-id="${id}" onclick="event.preventDefault(); event.stopPropagation(); toggleFav('${id}')">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M8 12.027 3.297 14.5l.9-5.243L.1 5.997l5.258-.764L8 0l2.642 5.233 5.258.764-4.097 3.26.9 5.243L8 12.027Z"></path>
+              </svg>
+            </button>
           </a>`;
       }
 
@@ -56,14 +68,13 @@
         activeTab(book);
         const lessons = data[num]||[];
         const favs = getFavs();
-        const filter = currentFilter();
 
-        // Last seen (single card, only show in 'all' filter)
+        // Last seen
         try{
           const recRaw = JSON.parse(localStorage.getItem(RECENT_KEY)||'[]');
           const rec = recRaw.filter(x=>typeof x?.id==='string' && x.id.startsWith(book+'/'))
                             .sort((a,b)=> (b.ts||0)-(a.ts||0))[0];
-          if (filter==='all' && rec) {
+          if (rec) {
             const i = lessons.findIndex(l=>`${book}/${l.filename}`===rec.id);
             if (i>=0) {
               const lesson = lessons[i];
@@ -85,16 +96,12 @@
                 const href = toLessonHref(book, lesson);
                 lastBox.innerHTML = `
                   <a class="last-seen" href="${href}" data-id="${rec.id}" id="lastSeenLink">
-                    <div class="last-left">
-                      <span class="last-icon" aria-hidden="true">
-                        <svg viewBox="0 0 16 16"><path d="M8 1.5A6.5 6.5 0 1 1 1.5 8 6.508 6.508 0 0 1 8 1.5Zm0 1A5.5 5.5 0 1 0 13.5 8 5.507 5.507 0 0 0 8 2.5Zm-.5 2a.5.5 0 0 1 1 0v3.146l2.177 1.255a.5.5 0 1 1-.5.866L7.5 8V4.5Z"></path></svg>
-                      </span>
-                      <div class="last-meta">
-                        <div class="last-title">${lesson.title}</div>
-                        ${posTxt?`<div class="last-sub">${posTxt}</div>`:''}
-                      </div>
+                    <div class="lesson-content">
+                      <div class="lesson-num">上次学习</div>
+                      <div class="lesson-title">${lesson.title}</div>
+                      ${posTxt?`<div style="font-size:13px;color:var(--muted);margin-top:4px">${posTxt}</div>`:''}
                     </div>
-                    <div class="last-cta" aria-hidden="true"><span class="chev">›</span></div>
+                    <div style="flex:0 0 auto;width:20px;height:20px;color:var(--accent);display:flex;align-items:center;justify-content:center">→</div>
                   </a>`;
               }
             } else {
@@ -105,40 +112,33 @@
           }
         }catch(_){}
 
-        // Main list
-        const list = filter==='fav' ? lessons.map((l,i)=>({l,i})).filter(({l})=>favs.has(lessonId(book,l))) : lessons.map((l,i)=>({l,i}));
-        container.innerHTML = list.map(({l,i})=> itemHTML(book, l, i, favs)).join('');
+        // Main list - 不要覆盖整个container，因为里面包含历史播放区域
+        const existingGrid = container.querySelector('.lessons-grid');
+        if (existingGrid) {
+          existingGrid.innerHTML = lessons.map((l,i)=> itemHTML(book, l, i, favs)).join('');
+        } else {
+          const gridDiv = document.createElement('div');
+          gridDiv.className = 'lessons-grid';
+          gridDiv.innerHTML = lessons.map((l,i)=> itemHTML(book, l, i, favs)).join('');
+          container.appendChild(gridDiv);
+        }
       }
-      window.addEventListener('hashchange',load);
+      window.addEventListener('hashchange',load, { passive: true });
       NCE_APP.initSegmented(document);
-      // init filter segmented
-      updateFilterUI();
-      if (segFilter){
-        segFilter.addEventListener('click', (e)=>{
-          const a = e.target.closest('.seg'); if(!a) return;
-          e.preventDefault();
-          const v = a.dataset.filter==='fav' ? 'fav' : 'all';
-          setFilter(v);
-          load();
-        });
-      }
 
-      // favorite toggle (delegate for both lists)
-      function onFavToggle(e){
-        const el = e.target.closest('.fav');
-        if(!el) return;
-        e.preventDefault(); e.stopPropagation();
-        const id = el.dataset.id; if(!id) return;
+        // 全局函数：添加/移除收藏
+      window.toggleFav = function(id) {
+        if (!id) return;
         const favs = getFavs();
         if (favs.has(id)) favs.delete(id); else favs.add(id);
         saveFavs(favs);
-        // Re-render to keep filter/active states in sync
-        (async()=>{ const res=await fetch('static/data.json'); const data=await res.json(); render(data); })();
-      }
-      container.addEventListener('click', onFavToggle);
-      container.addEventListener('keydown', (e)=>{
-        if ((e.key==='Enter' || e.key===' ') && e.target.closest('.fav')) { e.preventDefault(); onFavToggle(e); }
-      });
+        // 重新渲染以更新状态
+        (async()=>{
+          const res=await fetch('static/data.json');
+          const data=await res.json();
+          render(data);
+        })();
+      };
       // last seen: set resume flag before navigation
       document.addEventListener('click', (e)=>{
         const a = e.target.closest('#lastSeenLink');
@@ -165,15 +165,12 @@
         <a class="seg" href="#NCE3" data-book="NCE3">第三册</a>
         <a class="seg" href="#NCE4" data-book="NCE4">第四册</a>
       </div>
-      <div class="segmented tiny" id="favFilter" role="tablist" aria-label="筛选">
-        <a class="seg" href="#" data-filter="all">全部</a>
-        <a class="seg" href="#" data-filter="fav">收藏</a>
-      </div>
     </header>
-    <section class="section" id="lastSeenWrap" style="display:none">
-      <div id="lastSeen"></div>
-    </section>
-    <main class="lessons" id="lessons"></main>
+    <main class="lessons" id="lessons">
+      <section class="section last-seen-section" id="lastSeenWrap" style="display:none">
+        <div id="lastSeen"></div>
+      </section>
+    </main>
     <footer>
       <p class="repo">
         <a class="gh-link" href="https://github.com/luzhenhua/NCE-Flow" target="_blank" rel="noopener" aria-label="GitHub repository">
