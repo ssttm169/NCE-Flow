@@ -73,6 +73,8 @@
     const speedButton = qs('#speed')
     // 连读/点读开关
     const modeToggle = qs('#modeToggle');
+    // 自动跟随开关
+    const followToggle = qs('#followToggle');
     const rates = [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 0.75, 1.0];
     const DEFAULT_RATE = 1.0;
     
@@ -157,6 +159,16 @@
       }
     } catch (_) { }
 
+    // 自动跟随模式：true（自动跟随）或 false（不跟随）
+    const FOLLOW_KEY = 'autoFollow';
+    let autoFollow = true;
+    try {
+      const savedFollow = localStorage.getItem(FOLLOW_KEY);
+      if (savedFollow === 'true' || savedFollow === 'false') {
+        autoFollow = savedFollow === 'true';
+      }
+    } catch (_) { }
+
     function reflectReadMode() {
       if (!modeToggle) return;
       const isContinuous = readMode === 'continuous';
@@ -172,10 +184,30 @@
       scheduleAdvance();
     }
 
+    function reflectFollowMode() {
+      if (!followToggle) return;
+      followToggle.textContent = autoFollow ? '跟随' : '不跟随';
+      followToggle.setAttribute('aria-pressed', autoFollow ? 'true' : 'false');
+      followToggle.dataset.follow = autoFollow;
+    }
+
+    function setFollowMode(follow) {
+      autoFollow = follow === true;
+      try { localStorage.setItem(FOLLOW_KEY, autoFollow.toString()); } catch (_) { }
+      reflectFollowMode();
+    }
+
     if (modeToggle) {
       reflectReadMode();
       modeToggle.addEventListener('click', () => {
         setReadMode(readMode === 'continuous' ? 'single' : 'continuous');
+      });
+    }
+
+    if (followToggle) {
+      reflectFollowMode();
+      followToggle.addEventListener('click', () => {
+        setFollowMode(!autoFollow);
       });
     }
 
@@ -212,23 +244,45 @@
 
     function clearAdvance() { if (segmentTimer) { clearTimeout(segmentTimer); segmentTimer = 0; } }
 
+    let isScheduling = false; // 防止重复调度
+    let scheduleTime = 0; // 记录调度时间点
     function scheduleAdvance() {
+      if (isScheduling) return; // 防止重复调度
       clearAdvance();
       if (audio.paused) return; // 不在播放时不安排下一步
       if (segmentEnd && idx >= 0) {
         const rate = Math.max(0.0001, audio.playbackRate || 1);
-        const ms = Math.max(0, (segmentEnd - audio.currentTime) * 1000 / rate);
+        const currentTime = audio.currentTime;
+        const ms = Math.max(0, (segmentEnd - currentTime) * 1000 / rate);
+
+        // 防止过短的定时器或重复调度
+        if (ms < 50 || ms > 30000) return;
+
+        // 检查是否已经调度过这个时间点
+        if (Math.abs(scheduleTime - segmentEnd) < 0.1) return;
+
+        scheduleTime = segmentEnd;
+        isScheduling = true;
         segmentTimer = setTimeout(() => {
-          if (readMode === 'continuous') {
-            if (idx + 1 < items.length) {
-              playSegment(idx + 1);
+          isScheduling = false;
+          scheduleTime = 0;
+
+          // 检查当前是否仍在预期的播放范围内
+          const currentIdx = idx;
+          const currentSegmentEnd = segmentEnd;
+          const actualCurrentTime = audio.currentTime;
+
+          // 如果已经播放到下一个句子了，不要重复播放
+          if (actualCurrentTime >= currentSegmentEnd - 0.2) {
+            if (readMode === 'continuous') {
+              if (currentIdx + 1 < items.length) {
+                playSegment(currentIdx + 1);
+              } else {
+                audio.pause();
+              }
             } else {
-              // 最后一条：停止
               audio.pause();
             }
-          } else {
-            // 点读：到段末停止
-            audio.pause();
           }
         }, ms);
       }
@@ -241,6 +295,14 @@
 
     function playSegment(i) {
       if (i < 0 || i >= items.length) return;
+      // 防止重复播放同一句子
+      if (idx === i && !audio.paused) return;
+
+      // 清除之前的调度
+      clearAdvance();
+      isScheduling = false;
+      scheduleTime = 0;
+
       idx = i;
       const it = items[i];
       audio.currentTime = Math.max(0, it.start);
@@ -248,14 +310,26 @@
       const p = audio.play();
       if (p && p.catch) { p.catch(() => { }); }
       highlight(i);
-      scheduleAdvance();
+
+      // 使用 requestAnimationFrame 确保 DOM 更新完成后再调度
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          scheduleAdvance();
+        });
+      });
     }
 
     function highlight(i) {
       const prev = listEl.querySelector('.sentence.active');
       if (prev) prev.classList.remove('active');
       const cur = listEl.querySelector(`.sentence[data-idx="${i}"]`);
-      if (cur) { cur.classList.add('active'); cur.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      if (cur) {
+        cur.classList.add('active');
+        // 只有在自动跟随开启时才滚动到当前位置
+        if (autoFollow) {
+          cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
     }
 
     listEl.addEventListener('click', e => {
@@ -263,31 +337,42 @@
       playSegment(parseInt(s.dataset.idx, 10));
     });
 
+    let lastUpdateTime = 0;
     audio.addEventListener('timeupdate', () => {
       const t = audio.currentTime;
-      // Only maintain highlight and reschedule if user scrubbed into another sentence
-      // Update current index/highlight
+      const now = performance.now();
+
+      // 节流 timeupdate 处理，避免频繁触发
+      if (now - lastUpdateTime < 200) return;
+      lastUpdateTime = now;
+
+      // 只处理高亮和位置保存，不处理调度
       for (let i = 0; i < items.length; i++) {
         const it = items[i];
         const segEnd = computeEnd(it);
         const within = t >= it.start && (segEnd ? t < segEnd : true);
         if (within) {
-          if (idx !== i) { idx = i; segmentEnd = segEnd; highlight(i); scheduleAdvance(); }
+          if (idx !== i) {
+            idx = i;
+            segmentEnd = segEnd;
+            highlight(i);
+          }
           break;
         }
       }
       // throttle persist last position
-      const now = performance.now();
       if (now - _lastSavedAt > 2000) { _lastSavedAt = now; saveLastPos(); }
     });
 
     // User control: when paused, stop auto-advance; when resumed, re-schedule
     audio.addEventListener('pause', () => {
       clearAdvance();
+      isScheduling = false; // 重置调度状态
       saveLastPos(true);
     });
     audio.addEventListener('play', () => {
-      scheduleAdvance();
+      // 延迟调度，避免与 timeupdate 冲突
+      setTimeout(() => scheduleAdvance(), 50);
       // update recents timestamp upon play interaction
       touchRecent();
     });

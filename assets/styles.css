@@ -58,6 +58,7 @@ body::before{
 /* Back/Speed buttons inline with player — unify control height with audio */
 .back-inline{display:inline-flex;align-items:center;gap:6px;height:var(--control-h);padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);color:inherit;flex:0 0 auto;}
 .back-inline svg{width:14px;height:14px;fill:currentColor}
+.back-inline[aria-pressed="true"]{background:color-mix(in srgb, var(--accent) 20%, var(--surface));color:var(--accent)}
 
 /* Segmented control */
 .segmented{display:inline-flex;gap:6px;background:color-mix(in srgb, var(--bg) 70%, transparent);border:1px solid var(--border);border-radius:999px;padding:4px;margin-top:14px;backdrop-filter:saturate(120%) blur(10px)}
