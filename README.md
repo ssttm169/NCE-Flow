@@ -1,96 +1,205 @@
+# <div align="center">NCE Flow</div>
+
 <div align="center">
 
-# NCE Flow
+**新概念英语在线点读，点句即读、连续播放**
 
-Tap any sentence, keep reading.  
-简约 · 高效 · 专注的新概念英语在线点读（NCE1–NCE4）。
+[![GitHub stars](https://img.shields.io/github/stars/luzhenhua/NCE-Flow.svg?style=social&label=Star)](https://github.com/luzhenhua/NCE-Flow)
+[![GitHub forks](https://img.shields.io/github/forks/luzhenhua/NCE-Flow.svg?style=social&label=Fork)](https://github.com/luzhenhua/NCE-Flow)
+[![GitHub release](https://img.shields.io/github/release/luzhenhua/NCE-Flow.svg)](https://github.com/luzhenhua/NCE-Flow/releases)
+[![License](https://img.shields.io/github/license/luzhenhua/NCE-Flow.svg)](LICENSE)
+[![GitHub issues](https://img.shields.io/github/issues/luzhenhua/NCE-Flow)](https://github.com/luzhenhua/NCE-Flow/issues)
+
+[![Star History Chart](https://api.star-history.com/svg?repos=luzhenhua/NCE-Flow&type=Date)](https://star-history.com/#luzhenhua/NCE-Flow&Date)
+
+**简约 · 高效 · 专注｜零依赖 · 纯静态 · 即开即用**
+
+[在线体验](https://nce.luzhenhua.cn) · [下载完整版](https://github.com/luzhenhua/NCE-Flow/releases) · [使用文档](#-使用指南) · [问题反馈](https://github.com/luzhenhua/NCE-Flow/issues)
 
 </div>
 
-## ✨ 特性
+---
 
-- 句子级点读：点击任一句，从该句开始连续播放，自动高亮并居中
-- 语言视图：EN / EN+CN / CN 三态切换（持久化保存）
-- 现代 UI：Apple 风格、浅深色自适应、顺滑过渡
-- 零依赖：纯静态 HTML/CSS/JS，可直接 GitHub Pages 部署
-- LRC 兼容：支持 `英文|中文` 同行，或“同时间戳上下两行”堆叠格式
-- 批量翻译：内置 `translate_lrc.py`，可将纯英文 LRC 转双语（可原地写回）
+## 核心特性
 
-## 🗂 目录结构
+### 智能点读
+- **句子级点读**：点击任一句子，从该句开始连续播放
+- **自动跟随**：播放时自动高亮并居中当前句子
+- **模式切换**：支持连读/点读两种播放模式
+- **断点续播**：智能记忆上次学习位置
 
-```
-assets/          # 样式与脚本（styles.css, app.js, lesson.js）
-index.html       # 首页（书目 + 课程列表）
-lesson.html      # 课文点读页
-static/data.json # 书目与课程元数据
-NCE1..NCE4/      # 音频与 LRC 资源（文件名与 data.json 一致）
-```
+### 多语言视图
+- **EN 模式**：纯英文显示
+- **EN+CN 模式**：双语对照显示
+- **CN 模式**：纯中文显示
+- **设置持久化**：语言偏好自动保存
 
-## ⬇️ 获取完整代码
+### 现代化界面
+- **Apple 风格**：采用 iOS 设计语言，简约优雅
+- **深浅色主题**：自动适配系统主题，护眼舒适
+- **流畅动画**：精心设计的过渡效果和微交互
+- **响应式设计**：完美适配桌面、平板、手机
 
-请通过下述任一方式获取项目，以确保音频（mp3）完整：
+### 技术优势
+- **零依赖**：纯 HTML/CSS/JavaScript，无需框架
+- **即开即用**：解压后直接打开 `index.html` 即可
+- **完整音频**：NCE1-NCE4 四册完整音频资源
+- **多平台部署**：支持 Vercel、Cloudflare、GitHub Pages 等
 
-- **推荐**：从 [Releases 页面](https://github.com/luzhenhua/NCE-Flow/releases) 下载打包好的压缩包（含完整音频）
-- 或使用：`git clone https://github.com/luzhenhua/NCE-Flow.git`
+---
 
-⚠️ **重要提醒**：不要使用 GitHub 页面右上角的 "Code → Download ZIP"。该 ZIP 可能不包含完整的 mp3（或仅为指针文件），会导致页面无声音。
+## 界面预览
 
-### 最新版本：v1.0.0
-- [📦 下载 NCE-Flow-v1.0.0.zip (583MB)](https://github.com/luzhenhua/NCE-Flow/releases/download/v1.0.0/NCE-Flow-v1.0.0.zip)
-- 包含新概念英语 1-4 册完整音频和字幕文件
-- 解压后直接用浏览器打开 `index.html` 即可使用
+### 首页导航
+<p align="center">
+  <img src="https://github.com/luzhenhua/NCE-Flow/assets/your_screenshot_1.png" alt="首页预览" width="800">
+</p>
 
-## 🚀 本地运行
+### 课文点读
+<p align="center">
+  <img src="https://github.com/luzhenhua/NCE-Flow/assets/your_screenshot_2.png" alt="课文点读预览" width="800">
+</p>
 
-建议使用本地静态服务器（避免浏览器对 file:// 的 fetch 限制）：
+### 功能演示
+<p align="center">
+  <img src="https://github.com/luzhenhua/NCE-Flow/assets/your_demo.gif" alt="功能演示" width="800">
+</p>
 
-```
+---
+
+## 快速开始
+
+### 方式一：下载完整版（推荐）
+
+<div align="center">
+
+[![下载按钮](https://img.shields.io/badge/下载完整版-blue?style=for-the-badge)](https://github.com/luzhenhua/NCE-Flow/releases/download/v1.0.0/NCE-Flow-v1.0.0.zip)
+
+**NCE-Flow-v1.0.0.zip (583MB) - 包含完整音频文件**
+
+</div>
+
+1. 下载压缩包并解压
+2. 双击打开 `index.html`
+3. 开始学习！
+
+### 方式二：Git Clone
+
+```bash
+git clone https://github.com/luzhenhua/NCE-Flow.git
+cd NCE-Flow
+# 使用本地服务器启动（推荐）
 python3 -m http.server 8080
 # 访问 http://localhost:8080
 ```
 
-或直接将仓库部署到 GitHub Pages（默认入口为根目录的 `index.html`）。
+### 方式三：在线体验
 
-## 🌐 演示与部署
+直接访问：https://nce.luzhenhua.cn
 
-- 演示站托管：部署在 腾讯云 EdgeOne（静态托管）。
-- 项目为纯静态站点，理论上支持任意静态平台：Vercel、Cloudflare Pages、GitHub Pages 等。
-- 部署要点：确保静态资源完整上传（尤其是 `NCE1..NCE4/` 下的 mp3 与 lrc），入口指向 `index.html`。
+---
 
-## 🎧 LRC 规范（本项目兼容两种）
-
-1) 同行双语（推荐）
+## 项目结构
 
 ```
-[mm:ss.xx]English sentence | 中文译文
+NCE-Flow/
+├── assets/                 # 样式与脚本
+│   ├── styles.css         # 主样式文件
+│   ├── app.js             # 应用核心逻辑
+│   └── lesson.js          # 播放控制逻辑
+├── static/
+│   └── data.json          # 课程元数据
+├── NCE1~NCE4/             # 四册教材资源
+│   ├── *.mp3              # 音频文件
+│   └── *.lrc              # 字幕文件
+├── index.html             # 首页导航
+├── lesson.html            # 课文点读页
+└── README.md              # 项目文档
 ```
 
-2) 上下两行（同时间戳）
+---
 
-```
-[mm:ss.xx]English sentence
-[mm:ss.xx]中文译文
-```
+## 使用指南
 
-> 播放端自动识别两种格式；连续播放的分段时长会自动兜底（避免极短句抖动）。
+### 选择课程
+1. 在首页选择要学习的册别（NCE1-NCE4）
+2. 浏览课程列表，点击要学习的课程
+3. 使用收藏功能标记重要课程
 
+### 开始学习
+1. **选择语言模式**：EN / EN+CN / CN
+2. **点击句子**：从任意句子开始播放
+3. **控制播放**：调节速度、切换连读/点读模式
+4. **切换课程**：使用上一课/下一课导航
 
-## 🙏 致谢
+### 个性化设置
+- **播放速度**：0.75x - 2.5x 可调
+- **自动跟随**：开启/关闭句子自动跟随
+- **播放模式**：连读模式 vs 点读模式
+- **界面主题**：自动适配系统浅色/深色主题
 
-- 原项目与灵感来源：[iChochy/NCE](https://github.com/iChochy/NCE)
+---
 
-  在此对原作者和社区表达感谢。
+## 技术实现
 
-- 首页整合书目与课程列表；
-- 课文页支持 EN/EN+CN/CN 三态语言视图；
-- 句子级点读 + 连续播放；
-- 视觉与动效统一（浅/深色自适应）。
+### 前端技术栈
+- **HTML5**：语义化标记，无障碍访问
+- **CSS3**：现代样式，支持深色模式、动画效果
+- **JavaScript ES6+**：模块化开发，无第三方依赖
+- **Web Audio API**：精确的音频播放控制
+- **LocalStorage**：用户偏好设置持久化
 
-- 感谢贡献：
-  - https://github.com/reaishijie 提交的 PR（播放速度控制与持久化）：
-    https://github.com/luzhenhua/NCE-Flow/pull/3
+### 核心功能
+- **LRC 解析引擎**：支持多种字幕格式
+- **时间轴同步**：毫秒级精度的音频字幕同步
+- **响应式布局**：适配各种屏幕尺寸
+- **性能优化**：音频预加载、播放缓冲优化
 
-## ⚠️ 免责声明
+---
+
+## 更新日志
+
+### v1.0.0 (2025-01-12)
+- **正式发布**：完整功能版本
+- **完整音频**：NCE1-NCE4 四册音频资源
+- **现代 UI**：Apple 风格界面设计
+- **收藏功能**：课程收藏和学习记录
+- **断点续播**：智能记忆学习进度
+- **多语言**：EN/EN+CN/CN 三态切换
+
+### 未来规划
+- **移动端优化**：PWA 支持，离线使用
+- **学习游戏化**：积分系统，成就徽章
+- **学习统计**：学习时长、进度分析
+- **多用户支持**：账户系统，数据同步
+
+---
+
+## 贡献指南
+
+欢迎贡献代码！请遵循以下步骤：
+
+1. **Fork** 本仓库
+2. **创建** 你的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. **提交** 你的更改 (`git commit -m 'Add some AmazingFeature'`)
+4. **推送** 到分支 (`git push origin feature/AmazingFeature`)
+5. **创建** Pull Request
+
+### 报告问题
+- 使用 [Issues](https://github.com/luzhenhua/NCE-Flow/issues) 报告 bug
+- 提供详细的问题描述和复现步骤
+- 包含截图或录屏会更有帮助
+
+---
+
+## 致谢
+
+- **原项目灵感**：[iChochy/NCE](https://github.com/iChochy/NCE)
+- **贡献者**：[reaishijie](https://github.com/reaishijie) 的 PR 支持
+
+---
+
+## 免责声明
 
 **重要声明：本网站的内容仅限个人学习、研究或欣赏之用，完全没有丝毫商业用途。**
 
@@ -99,22 +208,29 @@ python3 -m http.server 8080
 - 严禁用于任何商业目的或未经授权的传播
 - 使用本项目即表示您同意上述条款
 
-## 📚 支持正版
+### 支持正版
 
 **为尊重和保护著作权人的合法权益，我们强烈建议用户：**
 
-- ✅ 购买合法授权的新概念英语正版教材
-- ✅ 使用官方授权的学习资源和平台
-- ✅ 支持原创作者和教育出版社
-- ✅ 本项目仅作为正版教材的补充学习工具
-
-**本项目定位：**
-NCE Flow 是一个纯技术展示项目，旨在通过现代化的 Web 技术提供更好的学习体验，**不替代**正版教材，**不提供**未经授权的商业内容。
-
-## 📄 协议
-
-本仓库代码遵循仓库内 LICENSE 文件所述协议。
+- 购买合法授权的新概念英语正版教材
+- 使用官方授权的学习资源和平台
+- 支持原创作者和教育出版社
+- 本项目仅作为正版教材的补充学习工具
 
 ---
 
-如有任何版权问题或建议，请联系：luzhenhuadev@qq.com，我们将尽快处理。
+## 许可证
+
+本项目采用 [MIT License](LICENSE) 开源协议。
+
+---
+
+<div align="center">
+
+**如果这个项目对你有帮助，请给个 Star 支持一下！**
+
+[回到顶部](#-nce-flow)
+
+Made with ❤️ by [Luzhenhua](https://luzhenhua.cn)
+
+</div>
