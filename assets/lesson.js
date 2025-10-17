@@ -561,11 +561,15 @@
           start = Math.min(Number.isFinite(dur) ? Math.max(0, dur - 0.05) : start + epsilon, cur + epsilon);
         }
       }
-      audio.currentTime = start;
+      if (typeof audio.fastSeek === 'function') {
+        try { audio.fastSeek(start); } catch(_) { audio.currentTime = start; }
+      } else {
+        audio.currentTime = start;
+      }
       segmentEnd = computeEnd(it);
       const p = audio.play();
       if (p && p.catch) { p.catch(() => { }); }
-      highlight(i);
+      highlight(i, manual);
 
       // 使用 requestAnimationFrame 确保 DOM 更新完成后再调度
       requestAnimationFrame(() => {
@@ -575,7 +579,7 @@
       });
     }
 
-    function highlight(i) {
+    function highlight(i, manual=false) {
       const prev = listEl.querySelector('.sentence.active');
       if (prev) prev.classList.remove('active');
       const cur = listEl.querySelector(`.sentence[data-idx="${i}"]`);
@@ -583,7 +587,16 @@
         cur.classList.add('active');
         // 只有在自动跟随开启时才滚动到当前位置
         if (autoFollow) {
-          cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // 若元素已大致在视口中，则避免滚动以减少 iOS Safari 抖动
+          try{
+            const rect = cur.getBoundingClientRect();
+            const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+            const within = rect.top >= vh * 0.15 && rect.bottom <= vh * 0.85;
+            if (!within) {
+              const behavior = manual ? 'smooth' : 'auto';
+              cur.scrollIntoView({ behavior, block: 'center' });
+            }
+          }catch(_){ }
         }
       }
     }
@@ -723,7 +736,7 @@
             const targetIdx = (Number.isInteger(pos.idx) && pos.idx>=0 && pos.idx<items.length) ? pos.idx : 0;
             audio.currentTime = Math.max(0, pos.t || 0);
             idx = targetIdx; segmentEnd = computeEnd(items[targetIdx]);
-            highlight(targetIdx);
+            highlight(targetIdx, false);
             if (sessionStorage.getItem('nce_resume_play')==='1'){
               const p = audio.play(); if (p && p.catch) p.catch(()=>{});
               scheduleAdvance();
