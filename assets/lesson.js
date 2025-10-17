@@ -585,25 +585,27 @@
       });
     }
 
+    let scrollTimer = 0;
+    function scheduleScrollTo(el, manual){
+      if (!el) return;
+      if (scrollTimer) { clearTimeout(scrollTimer); scrollTimer = 0; }
+      if (!autoFollow) return;
+      if (manual) {
+        try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(_){}
+        return;
+      }
+      // 自动模式：延后执行无动画滚动，避开段首易抖区域
+      scrollTimer = setTimeout(() => {
+        try { el.scrollIntoView({ behavior: 'auto', block: 'center' }); } catch(_){}
+      }, 420);
+    }
     function highlight(i, manual=false) {
       const prev = listEl.querySelector('.sentence.active');
       if (prev) prev.classList.remove('active');
       const cur = listEl.querySelector(`.sentence[data-idx="${i}"]`);
       if (cur) {
         cur.classList.add('active');
-        // 只有在自动跟随开启时才滚动到当前位置
-        if (autoFollow) {
-          // 若元素已大致在视口中，则避免滚动以减少 iOS Safari 抖动
-          try{
-            const rect = cur.getBoundingClientRect();
-            const vh = window.innerHeight || document.documentElement.clientHeight || 0;
-            const within = rect.top >= vh * 0.15 && rect.bottom <= vh * 0.85;
-            if (!within) {
-              const behavior = manual ? 'smooth' : 'auto';
-              cur.scrollIntoView({ behavior, block: 'center' });
-            }
-          }catch(_){ }
-        }
+        scheduleScrollTo(cur, manual);
       }
     }
 
@@ -652,6 +654,7 @@
       // 内部切句导致的 pause 不写入本地，避免同步写阻塞主线程
       if (!internalPause) saveLastPos(true);
       internalPause = false;
+      if (scrollTimer) { clearTimeout(scrollTimer); scrollTimer = 0; }
     });
     audio.addEventListener('play', () => {
       // 延迟调度，避免与 timeupdate 冲突
