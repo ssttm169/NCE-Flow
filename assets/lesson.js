@@ -535,10 +535,11 @@
       scheduleAdvance();
     });
 
-    function playSegment(i) {
+    function playSegment(i, opts) {
+      const manual = !!(opts && opts.manual);
       if (i < 0 || i >= items.length) return;
-      // 防止重复播放同一句子
-      if (idx === i && !audio.paused) return;
+      // 防止重复播放同一句子（仅自动流程）。手动点击允许从头重播
+      if (!manual && idx === i && !audio.paused) return;
 
       // 清除之前的调度
       clearAdvance();
@@ -547,7 +548,20 @@
 
       idx = i;
       const it = items[i];
-      audio.currentTime = Math.max(0, it.start);
+      // 在部分移动浏览器上，播放状态下直接 seek 会出现短暂回放前一段的现象
+      // 统一先暂停再跳转再播放，避免“残响”
+      try { audio.pause(); } catch(_){}
+      const cur = Math.max(0, audio.currentTime || 0);
+      let start = Math.max(0, it.start || 0);
+      if (!manual) {
+        // 自动前进时，若新起点与当前时间过近或在其之前，给一个极小前移以避免回放抖动
+        if (start <= cur + 0.005) {
+          const dur = Number(audio.duration);
+          const epsilon = 0.02; // 20ms 前推
+          start = Math.min(Number.isFinite(dur) ? Math.max(0, dur - 0.05) : start + epsilon, cur + epsilon);
+        }
+      }
+      audio.currentTime = start;
       segmentEnd = computeEnd(it);
       const p = audio.play();
       if (p && p.catch) { p.catch(() => { }); }
@@ -576,7 +590,7 @@
 
     listEl.addEventListener('click', e => {
       const s = e.target.closest('.sentence'); if (!s) return;
-      playSegment(parseInt(s.dataset.idx, 10));
+      playSegment(parseInt(s.dataset.idx, 10), { manual: true });
     });
 
     let lastUpdateTime = 0;
