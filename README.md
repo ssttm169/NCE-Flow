@@ -38,7 +38,7 @@
    ```
 
    **方法三：使用VSCode的Live Server插件**
-   - 安装Live Server��件
+   - 安装Live Server插件
    - 右键点击 `index.html`，选择"Open with Live Server"
 
 3. 在浏览器中打开显示的本地地址，开始学习！
