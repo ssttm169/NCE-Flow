@@ -619,6 +619,19 @@
       const t = audio.currentTime;
       const now = performance.now();
 
+      // 点读模式下，靠近段末时硬停，防止漏出下一句前缀音
+      if (readMode === 'single' && idx >= 0 && segmentEnd) {
+        const remaining = segmentEnd - t;
+        if (remaining <= 0.07) {
+          try { audio.pause(); } catch(_){}
+          try { audio.currentTime = Math.max(0, segmentEnd - 0.005); } catch(_){}
+          clearAdvance();
+          isScheduling = false;
+          scheduleTime = 0;
+          return;
+        }
+      }
+
       // 节流 timeupdate 处理，避免频繁触发
       if (now - lastUpdateTime < 200) return;
       lastUpdateTime = now;
