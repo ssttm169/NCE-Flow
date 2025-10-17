@@ -20,9 +20,30 @@
 
 ## 快速开始
 
-1. **下载完整版**：[NCE-Flow-v1.0.0.zip](https://github.com/luzhenhua/NCE-Flow/releases/download/v1.0.0/NCE-Flow-v1.0.0.zip) (583MB)
-2. 解压后双击 `index.html`
-3. 开始学习！
+1. **下载完整版**：[访问 Releases 页面](https://github.com/luzhenhua/NCE-Flow/releases) 
+2. 解压后启动本地服务器：
+
+   **方法一：使用Python（推荐）**
+   ```bash
+   # 在解压后的文件夹中打开终端，运行：
+   python -m http.server 8000
+   # 然后访问：http://localhost:8000
+   ```
+
+   **方法二：使用Node.js**
+   ```bash
+   # 在解压后的文件夹中运行：
+   npx serve .
+   # 然后访问显示的本地地址
+   ```
+
+   **方法三：使用VSCode的Live Server插件**
+   - 安装Live Server��件
+   - 右键点击 `index.html`，选择"Open with Live Server"
+
+3. 在浏览器中打开显示的本地地址，开始学习！
+
+**注意**：不能直接双击 `index.html` 文件，会因为浏览器安全策略导致无法加载数据文件。
 
 ## 项目结构
 

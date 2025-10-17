@@ -11,6 +11,7 @@
   --accent-2: #7c4dff; /* purple */
   --radius: 14px;
   --control-h: 34px; /* unified control height */
+  --content-max: 780px; /* unified content width */
 }
 
 /* Fallback for browsers that don't support color-mix() */
@@ -28,6 +29,8 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
+/* Ensure hidden elements don't display (robust across browsers) */
+[hidden]{display:none !important}
 body{
   margin:0;
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Arial,"Microsoft YaHei",sans-serif;
@@ -89,12 +92,15 @@ body::before{
 
 /* Back/Speed buttons inline with player — unify control height with audio */
 .back-inline{display:inline-flex;align-items:center;gap:6px;height:var(--control-h);padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);color:inherit;flex:0 0 auto;}
-.back-inline svg{width:14px;height:14px;fill:currentColor}
+.back-inline svg{width:14px;height:14px}
 .back-inline[aria-pressed="true"]{background:color-mix(in srgb, var(--accent) 20%, var(--surface));color:var(--accent)}
+/* Compact, icon-only button variant */
+.back-inline.icon-only{padding:0 10px}
+.back-inline.icon-only svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6}
 
 /* Segmented control */
 .segmented{display:inline-flex;gap:6px;background:color-mix(in srgb, var(--bg) 70%, transparent);border:1px solid var(--border);border-radius:999px;padding:4px;margin-top:14px;backdrop-filter:saturate(120%) blur(10px)}
-.segmented .seg{appearance:none;border:0;background:transparent;color:var(--text);font-size:12px;padding:8px 12px;border-radius:999px;cursor:pointer;text-decoration:none;transition:background .15s ease, color .15s ease}
+.segmented .seg{appearance:none;border:0;background:transparent;color:var(--text);font-size:12px;padding:8px 12px;border-radius:999px;cursor:pointer;text-decoration:none;transition:background .15s ease, color .15s ease; white-space:nowrap}
 .segmented .seg.active{background:color-mix(in srgb, var(--accent) 20%, var(--card));box-shadow:var(--shadow)}
 /* tiny segmented for minimal toolbar switches */
 .segmented.tiny{padding:2px;gap:2px}
@@ -111,6 +117,7 @@ body::before{
   border:1px solid var(--border);
   backdrop-filter:saturate(120%) blur(10px);
 }
+.seg-wrap{max-width:var(--content-max); margin:0 auto; display:flex; justify-content:center}
 .segmented.tabs .seg{
   font-size:13px;
   font-weight:600;
@@ -161,7 +168,7 @@ body::before{
 .last-seen-section{margin-bottom:12px}
 
 /* Lessons container */
-.lessons{padding:10px 0 40px}
+.lessons{padding:10px 0 40px; max-width:var(--content-max); margin:0 auto}
 
 /* Lessons grid - Apple-inspired design */
 .lessons-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:8px}
@@ -248,7 +255,7 @@ body::before{
 .btn{appearance:none;border:1px solid var(--border);background:color-mix(in srgb, var(--card) 90%, transparent);backdrop-filter:saturate(120%) blur(10px);color:inherit;border-radius:10px;padding:6px 10px;cursor:pointer}
 .btn:hover{transform:translateY(-1px)}
 
-.sentences{padding:12px 0 22px}
+.sentences{padding:12px 0 22px; max-width:var(--content-max); margin:0 auto}
 .sentence{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px;margin:10px 0;cursor:pointer;transition:transform .12s ease}
 .sentence:hover{transform:translateY(-2px)}
 .sentence.active{border-left:4px solid var(--accent);background:color-mix(in srgb, var(--accent) 10%, var(--card))}
@@ -257,12 +264,30 @@ body::before{
 .lang-en .cn{display:none}
 .lang-cn .en{display:none}
 
+/* Auto Continue Card */
+.auto-continue-card{display:inline-flex; gap:4px; background:color-mix(in srgb, var(--bg) 70%, transparent); border:1px solid var(--border); border-radius:999px; padding:4px; backdrop-filter:saturate(120%) blur(10px); animation:fadeIn 0.2s ease-out; height:var(--control-h); align-items:center;}
+.auto-continue-option{display:flex; align-items:center; gap:0; border-radius:999px; transition:all 0.15s ease;}
+.auto-continue-option input[type="radio"]{appearance:none; position:absolute; opacity:0;}
+.auto-continue-option label{display:block; padding:6px 10px; font-size:12px; color:var(--text); cursor:pointer; border-radius:999px; transition:all 0.15s ease; margin:0; white-space:nowrap;}
+.auto-continue-option input[type="radio"]:checked + label{background:color-mix(in srgb, var(--accent) 20%, var(--card)); color:var(--accent); box-shadow:var(--shadow);}
+.auto-continue-option:hover label{background:color-mix(in srgb, var(--surface) 80%, transparent);}
+
+@keyframes fadeIn{from{opacity:0; transform:scale(0.95);} to{opacity:1; transform:scale(1);}}
+@keyframes slideDown{from{opacity:0; transform:translate(-50%, -20px);} to{opacity:1; transform:translate(-50%, 0);}}
+@keyframes slideUp{from{opacity:1; transform:translate(-50%, 0);} to{opacity:0; transform:translate(-50%, -20px);}}
+
+/* Responsive auto continue */
+@media (max-width: 768px){
+  .auto-continue-card{gap:2px; padding:3px;}
+  .auto-continue-option label{padding:5px 8px; font-size:11px;}
+}
+
 /* Audio */
-.player{display:flex; align-items:center; gap:8px; margin:6px auto 10px; padding:0; background:transparent; border:none; box-shadow:none; min-height:var(--control-h);}
-.player audio{display:block; flex:1; width:100%; max-width:780px; height:var(--control-h); accent-color: var(--accent); background: transparent;}
+.player{display:flex; align-items:center; gap:8px; margin:6px auto 10px; padding:0; background:transparent; border:none; box-shadow:none; min-height:var(--control-h); max-width:var(--content-max); width:100%;}
+.player audio{display:block; flex:1; width:100%; max-width:var(--content-max); height:var(--control-h); accent-color: var(--accent); background: transparent;}
 
 /* Lesson bottom navigation */
-.lesson-nav{display:flex; justify-content:space-between; gap:10px; padding:6px 0 16px; max-width:780px; margin:0 auto}
+.lesson-nav{display:flex; justify-content:space-between; gap:10px; padding:6px 0 16px; max-width:var(--content-max); margin:0 auto}
 .btn-nav{display:inline-flex; align-items:center; justify-content:center; padding:8px 14px; min-width:96px;
   border-radius:999px; border:1px solid var(--border); background:var(--surface); color:inherit; text-decoration:none; box-shadow:var(--shadow);
   transition:transform .15s ease, box-shadow .15s ease}
@@ -360,3 +385,33 @@ a{text-decoration:none}
 
 /* Smooth theme transitions for surfaces */
 body, .card, .lesson-item, .sentence{ transition: background-color .35s ease, color .35s ease, box-shadow .35s ease, border-color .35s ease; }
+
+/* Settings Panel (Apple-like modal sheet) */
+.settings-overlay{position:fixed; inset:0; background:color-mix(in srgb, var(--bg) 30%, rgba(0,0,0,0.35)); backdrop-filter:saturate(130%) blur(12px); -webkit-backdrop-filter:saturate(130%) blur(12px); z-index:900;}
+.settings-panel{position:fixed; left:50%; top:50%; transform:translate(-50%,-52%) scale(.98); width:min(92vw, 520px); max-height:min(86vh, 680px); overflow:auto; background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); z-index:901; padding:12px 14px; display:flex; flex-direction:column; gap:10px; opacity:0;}
+.settings-overlay, .settings-panel{transition:opacity .22s ease, transform .22s ease}
+.settings-overlay{opacity:0}
+.settings-overlay.show{opacity:1}
+.settings-panel.show{opacity:1; transform:translate(-50%,-50%) scale(1)}
+.settings-header{display:flex; align-items:center; justify-content:space-between; padding:4px 6px 2px 6px; border-bottom:1px solid color-mix(in srgb, var(--border) 70%, transparent);}
+.settings-header h2{font-size:16px; font-weight:600; margin:6px 0;}
+.icon-btn{display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:inherit; box-shadow:var(--shadow); cursor:pointer}
+.icon-btn:hover{background:color-mix(in srgb, var(--surface) 80%, transparent)}
+.settings-body{display:flex; flex-direction:column; gap:10px; padding:4px}
+.settings-group{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:12px; border:1px solid var(--border); border-radius:12px; background:color-mix(in srgb, var(--bg) 70%, transparent)}
+.settings-left{display:flex; flex-direction:column; gap:4px; min-width:0;}
+.settings-label{font-size:13px; color:var(--text); font-weight:600}
+.settings-desc{font-size:12px; color:var(--muted); line-height:1.5}
+.settings-control{display:flex; align-items:center; gap:8px}
+.settings-footer{display:flex; justify-content:space-between; padding:6px}
+.settings-control #modeToggle{display:none}
+
+/* Make inline controls adapt nicely inside panel */
+.settings-panel .back-inline{height:28px; padding:0 10px}
+.settings-panel .auto-continue-card{height:auto; padding:6px}
+.settings-panel .auto-continue-option label{padding:6px 10px}
+
+/* Hide overflow-prone inline controls on small screens (defensive) */
+@media (max-width: 560px){
+  .player .back-inline:not(#backLink):not(#settingsBtn){display:none}
+}

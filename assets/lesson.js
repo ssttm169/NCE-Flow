@@ -67,12 +67,18 @@
     const listEl = qs('#sentences');
     const audio = qs('#player');
     const backLink = qs('#backLink');
+    const settingsBtn = qs('#settingsBtn');
+    const settingsOverlay = qs('#settingsOverlay');
+    const settingsPanel = qs('#settingsPanel');
+    const settingsClose = qs('#settingsClose');
+    const settingsDone = qs('#settingsDone');
     const prevLessonLink = qs('#prevLesson');
     const nextLessonLink = qs('#nextLesson');
     // 新加控制音频播放速度
     const speedButton = qs('#speed')
     // 连读/点读开关
     const modeToggle = qs('#modeToggle');
+    const readModeSeg = qs('#readModeSeg');
     // 自动跟随开关
     const followToggle = qs('#followToggle');
     const rates = [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 0.75, 1.0];
@@ -169,18 +175,65 @@
       }
     } catch (_) { }
 
+    // 自动续播模式：single（本课结束）或 auto（自动续播）
+    const AUTO_CONTINUE_KEY = 'autoContinue';
+    let autoContinueMode = 'single'; // 默认不自动续播
+    try {
+      const savedAutoContinue = localStorage.getItem(AUTO_CONTINUE_KEY);
+      if (savedAutoContinue === 'single' || savedAutoContinue === 'auto') {
+        autoContinueMode = savedAutoContinue;
+      }
+    } catch (_) { }
+
     function reflectReadMode() {
-      if (!modeToggle) return;
       const isContinuous = readMode === 'continuous';
-      modeToggle.textContent = isContinuous ? '连读' : '点读';
-      modeToggle.setAttribute('aria-pressed', isContinuous ? 'true' : 'false');
-      modeToggle.dataset.mode = readMode;
+      if (modeToggle) {
+        modeToggle.textContent = isContinuous ? '连读' : '点读';
+        modeToggle.setAttribute('aria-pressed', isContinuous ? 'true' : 'false');
+        modeToggle.dataset.mode = readMode;
+      }
+      if (readModeSeg) {
+        const btns = readModeSeg.querySelectorAll('.seg');
+        btns.forEach(btn => {
+          const v = btn.getAttribute('data-read');
+          const active = (v === readMode);
+          btn.classList.toggle('active', active);
+          btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+      }
+      // 显示/隐藏自动续播设置
+      const autoContinueCard = document.getElementById('autoContinueCard');
+      if (autoContinueCard) {
+        if (isContinuous) { autoContinueCard.style.display = 'inline-flex'; }
+        else { autoContinueCard.style.display = 'none'; }
+      }
+    }
+
+    function reflectAutoContinueMode() {
+      const singleRadio = document.getElementById('autoContinueSingle');
+      const autoRadio = document.getElementById('autoContinueAuto');
+      if (singleRadio && autoRadio) {
+        singleRadio.checked = autoContinueMode === 'single';
+        autoRadio.checked = autoContinueMode === 'auto';
+      }
+    }
+
+    function setAutoContinueMode(mode) {
+      autoContinueMode = mode === 'auto' ? 'auto' : 'single';
+      try {
+        localStorage.setItem(AUTO_CONTINUE_KEY, autoContinueMode);
+      } catch (_) { }
+      reflectAutoContinueMode();
     }
 
     function setReadMode(mode) {
       readMode = mode === 'single' ? 'single' : 'continuous';
       try { localStorage.setItem(MODE_KEY, readMode); } catch (_) { }
       reflectReadMode();
+      // 模式切换时，先清除所有调度状态，然后重新调度
+      clearAdvance();
+      isScheduling = false;
+      scheduleTime = 0;
       scheduleAdvance();
     }
 
@@ -203,11 +256,41 @@
         setReadMode(readMode === 'continuous' ? 'single' : 'continuous');
       });
     }
+    if (readModeSeg) {
+      reflectReadMode();
+      readModeSeg.addEventListener('click', (e) => {
+        const b = e.target.closest('.seg');
+        if (!b) return;
+        const v = b.getAttribute('data-read') === 'single' ? 'single' : 'continuous';
+        setReadMode(v);
+      });
+    }
 
     if (followToggle) {
       reflectFollowMode();
       followToggle.addEventListener('click', () => {
         setFollowMode(!autoFollow);
+      });
+    }
+
+    // 自动续播设置事件监听
+    reflectAutoContinueMode();
+    const singleRadio = document.getElementById('autoContinueSingle');
+    const autoRadio = document.getElementById('autoContinueAuto');
+
+    if (singleRadio) {
+      singleRadio.addEventListener('change', () => {
+        if (singleRadio.checked) {
+          setAutoContinueMode('single');
+        }
+      });
+    }
+
+    if (autoRadio) {
+      autoRadio.addEventListener('change', () => {
+        if (autoRadio.checked) {
+          setAutoContinueMode('auto');
+        }
       });
     }
 
@@ -223,6 +306,69 @@
           if (ref && new URL(ref).origin === location.origin) { history.back(); return; }
         } catch (_) { }
         location.href = fallback;
+      });
+    }
+
+    // Settings panel open/close helpers
+    let _prevFocus = null;
+    let _trapHandler = null;
+    function getFocusable(root){
+      return root ? Array.from(root.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+        .filter(el=>!el.hasAttribute('disabled') && el.offsetParent !== null) : [];
+    }
+    function enableTrap(){
+      if (!settingsPanel) return;
+      const focusables = getFocusable(settingsPanel);
+      if (focusables.length){ focusables[0].focus(); }
+      _trapHandler = (e)=>{
+        if (e.key !== 'Tab') return;
+        const fs = getFocusable(settingsPanel);
+        if (!fs.length) return;
+        const first = fs[0], last = fs[fs.length-1];
+        if (e.shiftKey){
+          if (document.activeElement === first){ e.preventDefault(); last.focus(); }
+        } else {
+          if (document.activeElement === last){ e.preventDefault(); first.focus(); }
+        }
+      };
+      document.addEventListener('keydown', _trapHandler);
+    }
+    function disableTrap(){ if (_trapHandler){ document.removeEventListener('keydown', _trapHandler); _trapHandler = null; } }
+    function openSettings(){
+      if (settingsOverlay) { settingsOverlay.hidden = false; requestAnimationFrame(()=>settingsOverlay.classList.add('show')); }
+      if (settingsPanel) { settingsPanel.hidden = false; requestAnimationFrame(()=>settingsPanel.classList.add('show')); }
+      try { _prevFocus = document.activeElement; } catch(_){}
+      try { document.body.style.overflow = 'hidden'; } catch(_){}
+      enableTrap();
+    }
+    function closeSettings(){
+      disableTrap();
+      if (settingsOverlay) { settingsOverlay.classList.remove('show'); setTimeout(()=>{ settingsOverlay.hidden = true; }, 200); }
+      if (settingsPanel) { settingsPanel.classList.remove('show'); setTimeout(()=>{ settingsPanel.hidden = true; }, 200); }
+      try { document.body.style.overflow = ''; } catch(_){}
+      try { if (_prevFocus && _prevFocus.focus) _prevFocus.focus(); } catch(_){}
+    }
+    if (settingsBtn){ settingsBtn.addEventListener('click', openSettings); }
+    if (settingsOverlay){ settingsOverlay.addEventListener('click', closeSettings); }
+    if (settingsClose){ settingsClose.addEventListener('click', closeSettings); }
+    if (settingsDone){ settingsDone.addEventListener('click', closeSettings); }
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeSettings(); });
+    // Ensure panel is closed initially (defensive)
+    closeSettings();
+
+    // Reset defaults
+    const settingsReset = qs('#settingsReset');
+    if (settingsReset){
+      settingsReset.addEventListener('click', ()=>{
+        try{ localStorage.setItem('audioPlaybackRate', DEFAULT_RATE); }catch(_){ }
+        audio.playbackRate = DEFAULT_RATE;
+        setReadMode('continuous');
+        setFollowMode(true);
+        setAutoContinueMode('single');
+        reflectAutoContinueMode();
+        reflectFollowMode();
+        reflectReadMode();
+        showNotification('已恢复默认设置');
       });
     }
 
@@ -244,52 +390,148 @@
 
     function clearAdvance() { if (segmentTimer) { clearTimeout(segmentTimer); segmentTimer = 0; } }
 
+    // 获取下一课信息
+    async function getNextLesson(currentBook, currentFilename) {
+      try {
+        const response = await fetch(prefix + 'static/data.json');
+        if (!response.ok) return null;
+        const data = await response.json();
+        const bookNum = parseInt(currentBook.replace('NCE', '')) || 1;
+        const lessons = data[bookNum] || [];
+        const currentIndex = lessons.findIndex(lesson => lesson.filename === currentFilename);
+
+        if (currentIndex >= 0 && currentIndex < lessons.length - 1) {
+          return lessons[currentIndex + 1];
+        }
+        return null;
+      } catch (error) {
+        console.error('Failed to get next lesson:', error);
+        return null;
+      }
+    }
+
+    // 自动跳转到下一课
+    async function autoNextLesson() {
+      const nextLesson = await getNextLesson(book, base);
+      if (nextLesson) {
+        // 显示即将跳转的提示
+        showNotification(`即将跳转到下一课：${nextLesson.title}`);
+        setTimeout(() => {
+          // 预置下节课的断点与自动播放标记，实现跳转后自动播放
+          try {
+            const nextId = `${book}/${nextLesson.filename}`;
+            sessionStorage.setItem('nce_resume', nextId);
+            sessionStorage.setItem('nce_resume_play', '1');
+            try {
+              const map = JSON.parse(localStorage.getItem(LASTPOS_KEY) || '{}');
+              map[nextId] = { t: 0, idx: 0, ts: Date.now() };
+              localStorage.setItem(LASTPOS_KEY, JSON.stringify(map));
+            } catch (_) { }
+          } catch (_) { }
+          window.location.href = `lesson.html#${book}/${nextLesson.filename}`;
+        }, 2000);
+      } else {
+        // 已经是最后一课，显示完成提示
+        showNotification('🎉 恭喜完成本册课程！');
+      }
+    }
+
+    // 显示通知
+    function showNotification(message) {
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px 20px;
+        box-shadow: var(--shadow);
+        z-index: 1000;
+        backdrop-filter: saturate(120%) blur(10px);
+        animation: slideDown 0.3s ease-out;
+      `;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.style.animation = 'slideUp 0.3s ease-out';
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 300);
+      }, 2000);
+    }
+
     let isScheduling = false; // 防止重复调度
-    let scheduleTime = 0; // 记录调度时间点
+    let scheduleTime = 0; // 记录调度目标（段末）时间点，仅用于观测
+    const MAX_CHUNK_MS = 10000; // 分段调度最大间隔，处理超长句/慢速
     function scheduleAdvance() {
-      if (isScheduling) return; // 防止重复调度
+      // 统一先清理再调度，避免早退导致旧定时器残留
       clearAdvance();
+      isScheduling = false;
+      scheduleTime = 0;
+
       if (audio.paused) return; // 不在播放时不安排下一步
-      if (segmentEnd && idx >= 0) {
-        const rate = Math.max(0.0001, audio.playbackRate || 1);
-        const currentTime = audio.currentTime;
-        const ms = Math.max(0, (segmentEnd - currentTime) * 1000 / rate);
+      if (!(segmentEnd && idx >= 0)) return;
 
-        // 防止过短的定时器或重复调度
-        if (ms < 50 || ms > 30000) return;
+      const rate = Math.max(0.0001, audio.playbackRate || 1);
+      const currentTime = audio.currentTime;
+      const remainingMs = Math.max(0, (segmentEnd - currentTime) * 1000 / rate);
+      scheduleTime = segmentEnd;
+      const schedulingMode = readMode; // 记录调度时的模式
 
-        // 检查是否已经调度过这个时间点
-        if (Math.abs(scheduleTime - segmentEnd) < 0.1) return;
+      // 分段调度，避免超长延时导致定时器被丢弃
+      const delay = Math.max(10, Math.min(remainingMs, MAX_CHUNK_MS));
+      isScheduling = true;
+      segmentTimer = setTimeout(function tick() {
+        // 模式改变则放弃（setReadMode 会清理原定时器，这里双重保护）
+        if (readMode !== schedulingMode) { isScheduling = false; return; }
 
-        scheduleTime = segmentEnd;
-        isScheduling = true;
-        segmentTimer = setTimeout(() => {
+        // 如果已暂停或无有效段末，停止调度
+        if (audio.paused || !(segmentEnd && idx >= 0)) { isScheduling = false; return; }
+
+        const now = audio.currentTime;
+        const end = segmentEnd;
+
+        // 已到段末附近：执行段落结束逻辑
+        if (now >= end - 0.15) {
           isScheduling = false;
           scheduleTime = 0;
-
-          // 检查当前是否仍在预期的播放范围内
           const currentIdx = idx;
-          const currentSegmentEnd = segmentEnd;
-          const actualCurrentTime = audio.currentTime;
-
-          // 如果已经播放到下一个句子了，不要重复播放
-          if (actualCurrentTime >= currentSegmentEnd - 0.2) {
-            if (readMode === 'continuous') {
-              if (currentIdx + 1 < items.length) {
-                playSegment(currentIdx + 1);
+          if (readMode === 'continuous') {
+            if (currentIdx + 1 < items.length) {
+              playSegment(currentIdx + 1);
+            } else {
+              // 课程结束，检查是否自动续播
+              if (autoContinueMode === 'auto') {
+                audio.pause();
+                autoNextLesson();
               } else {
                 audio.pause();
               }
-            } else {
-              audio.pause();
             }
+          } else {
+            audio.pause();
           }
-        }, ms);
-      }
+          return;
+        }
+
+        // 未到段末则继续分段调度
+        const rate2 = Math.max(0.0001, audio.playbackRate || 1);
+        const remainMs2 = Math.max(0, (end - audio.currentTime) * 1000 / rate2);
+        const nextDelay = Math.max(10, Math.min(remainMs2, MAX_CHUNK_MS));
+        segmentTimer = setTimeout(tick, nextDelay);
+      }, delay);
     }
 
     // 进度跳转时，重置自动前进/暂停的计时
     audio.addEventListener('seeked', () => {
+      clearAdvance();
+      isScheduling = false;
+      scheduleTime = 0;
       scheduleAdvance();
     });
 
@@ -368,6 +610,7 @@
     audio.addEventListener('pause', () => {
       clearAdvance();
       isScheduling = false; // 重置调度状态
+      scheduleTime = 0;
       saveLastPos(true);
     });
     audio.addEventListener('play', () => {
@@ -375,6 +618,17 @@
       setTimeout(() => scheduleAdvance(), 50);
       // update recents timestamp upon play interaction
       touchRecent();
+    });
+
+    // 倍速变化由上方监听器触发 scheduleAdvance，这里无需重复绑定
+
+    // 音频整体播放结束兜底：用于最后一句未正确设置 end 的情况
+    audio.addEventListener('ended', () => {
+      if (readMode === 'continuous') {
+        if (autoContinueMode === 'auto') {
+          autoNextLesson();
+        }
+      }
     });
 
     // Handle lesson change via hash navigation (prev/next buttons)
@@ -416,6 +670,24 @@
 
     resolveLessonNeighbors();
 
+    // 如果音频元数据已就绪，为最后一句设置 end = duration
+    let _lastEndAdjusted = false;
+    function adjustLastEndIfPossible() {
+      if (_lastEndAdjusted) return;
+      if (!items || !items.length) return;
+      const dur = Number(audio.duration);
+      if (!Number.isFinite(dur) || dur <= 0) return;
+      const last = items[items.length - 1];
+      if (!last.end || last.end <= last.start || last.end > dur) {
+        last.end = dur;
+        if (idx === items.length - 1) {
+          segmentEnd = computeEnd(last);
+        }
+      }
+      _lastEndAdjusted = true;
+    }
+    audio.addEventListener('loadedmetadata', adjustLastEndIfPossible);
+
     loadLrc(lrc).then(({ meta, items: arr }) => {
       items = arr;
       titleEl.textContent = meta.ti || base;
@@ -424,6 +696,8 @@
       // Autoplay parameter is ignored by default; user taps to play
       // mark as visited in recents
       touchRecent();
+      // 若已知时长，修正最后一句的 end，确保段末逻辑能触发
+      adjustLastEndIfPossible();
 
       // Resume if coming from index last seen
       try{
