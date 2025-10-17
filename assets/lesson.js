@@ -127,6 +127,8 @@
     let idx = -1;
     let segmentEnd = 0; // current sentence end time
     let segmentTimer = 0; // timeout id for auto-advance
+    let internalPause = false; // 标记内部切句导致的暂停，避免在 pause 里做重活
+    let segmentStartWallclock = 0; // 每段开始的墙钟时间，用于首 300ms 降噪
     let prevLessonHref = '';
     let nextLessonHref = '';
     const RECENT_KEY = 'nce_recents';
@@ -549,15 +551,15 @@
       idx = i;
       const it = items[i];
       // 在部分移动浏览器上，播放状态下直接 seek 会出现短暂回放前一段的现象
-      // 统一先暂停再跳转再播放，避免“残响”
-      try { audio.pause(); } catch(_){}
+      // 统一先暂停再跳转再播放，并避免在 pause 事件里做重活
+      try { internalPause = true; audio.pause(); } catch(_){}
       const cur = Math.max(0, audio.currentTime || 0);
       let start = Math.max(0, it.start || 0);
       if (!manual) {
         // 自动前进时，若新起点与当前时间过近或在其之前，给一个极小前移以避免回放抖动
-        if (start <= cur + 0.005) {
+        if (start <= cur + 0.01) {
           const dur = Number(audio.duration);
-          const epsilon = 0.02; // 20ms 前推
+          const epsilon = 0.04; // 40ms 前推，进一步降低解码抖动
           start = Math.min(Number.isFinite(dur) ? Math.max(0, dur - 0.05) : start + epsilon, cur + epsilon);
         }
       }
@@ -567,8 +569,12 @@
         audio.currentTime = start;
       }
       segmentEnd = computeEnd(it);
-      const p = audio.play();
-      if (p && p.catch) { p.catch(() => { }); }
+      segmentStartWallclock = performance.now();
+      // 让浏览器有时间完成 seek 的解码定位，再启动播放
+      setTimeout(() => {
+        const p = audio.play();
+        if (p && p.catch) { p.catch(() => { }); }
+      }, 20);
       highlight(i, manual);
 
       // 使用 requestAnimationFrame 确保 DOM 更新完成后再调度
@@ -615,6 +621,11 @@
       if (now - lastUpdateTime < 200) return;
       lastUpdateTime = now;
 
+      // 段起始的短时间窗口内，避免做重型 DOM/计算，减小移动端抖动
+      if (segmentStartWallclock && now - segmentStartWallclock < 350) {
+        return;
+      }
+
       // 只处理高亮和位置保存，不处理调度
       for (let i = 0; i < items.length; i++) {
         const it = items[i];
@@ -638,13 +649,16 @@
       clearAdvance();
       isScheduling = false; // 重置调度状态
       scheduleTime = 0;
-      saveLastPos(true);
+      // 内部切句导致的 pause 不写入本地，避免同步写阻塞主线程
+      if (!internalPause) saveLastPos(true);
+      internalPause = false;
     });
     audio.addEventListener('play', () => {
       // 延迟调度，避免与 timeupdate 冲突
       setTimeout(() => scheduleAdvance(), 50);
       // update recents timestamp upon play interaction
       touchRecent();
+      internalPause = false;
     });
 
     // 倍速变化由上方监听器触发 scheduleAdvance，这里无需重复绑定
