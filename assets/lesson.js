@@ -236,6 +236,10 @@
       clearAdvance();
       isScheduling = false;
       scheduleTime = 0;
+      // 依据新模式刷新当前段末
+      if (idx >= 0 && idx < items.length) {
+        segmentEnd = endFor(items[idx]);
+      }
       scheduleAdvance();
     }
 
@@ -390,6 +394,16 @@
       return Math.max(it.end, it.start + minDur);
     }
 
+    // 根据模式选择段末：
+    // - 连读：使用带最小时长的 computeEnd，避免过短导致频繁跳句
+    // - 点读：严格以下一句开始时间为止，避免溢出到下一句产生前缀音
+    function endFor(it){
+      if (readMode === 'single') {
+        return (it.end && it.end > it.start) ? it.end : (it.start + 0.01);
+      }
+      return computeEnd(it);
+    }
+
     function clearAdvance() { if (segmentTimer) { clearTimeout(segmentTimer); segmentTimer = 0; } }
 
     // 获取下一课信息
@@ -498,8 +512,9 @@
         const now = audio.currentTime;
         const end = segmentEnd;
 
-        // 已到段末附近：执行段落结束逻辑
-        if (now >= end - 0.15) {
+        // 已到段末附近：执行段落结束逻辑（点读更靠前，以避免溢出下一句前缀）
+        const guardAhead = (readMode === 'single') ? 0.06 : 0.15;
+        if (now >= end - guardAhead) {
           isScheduling = false;
           scheduleTime = 0;
           const currentIdx = idx;
@@ -568,7 +583,7 @@
       } else {
         audio.currentTime = start;
       }
-      segmentEnd = computeEnd(it);
+      segmentEnd = endFor(it);
       segmentStartWallclock = performance.now();
       // 让浏览器有时间完成 seek 的解码定位，再启动播放
       setTimeout(() => {
@@ -644,7 +659,7 @@
       // 只处理高亮和位置保存，不处理调度
       for (let i = 0; i < items.length; i++) {
         const it = items[i];
-        const segEnd = computeEnd(it);
+        const segEnd = endFor(it);
         const within = t >= it.start && (segEnd ? t < segEnd : true);
         if (within) {
           if (idx !== i) {
@@ -765,7 +780,7 @@
           if (pos){
             const targetIdx = (Number.isInteger(pos.idx) && pos.idx>=0 && pos.idx<items.length) ? pos.idx : 0;
             audio.currentTime = Math.max(0, pos.t || 0);
-            idx = targetIdx; segmentEnd = computeEnd(items[targetIdx]);
+            idx = targetIdx; segmentEnd = endFor(items[targetIdx]);
             highlight(targetIdx, false);
             if (sessionStorage.getItem('nce_resume_play')==='1'){
               const p = audio.play(); if (p && p.catch) p.catch(()=>{});
