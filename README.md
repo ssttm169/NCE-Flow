@@ -20,10 +20,44 @@
 
 ## 快速开始
 
-1. **下载完整版**：[访问 Releases 页面](https://github.com/luzhenhua/NCE-Flow/releases) 
+### 方式一：Docker 一键部署（最简单）
+
+只需一条命令，无需下载代码：
+
+```bash
+docker run -d -p 8080:80 --name nce-flow --restart unless-stopped luzhenhua/nce-flow:latest
+```
+
+然后访问 `http://localhost:8080` 即可！
+
+**自定义端口：**
+```bash
+docker run -d -p 3000:80 --name nce-flow --restart unless-stopped luzhenhua/nce-flow:latest
+```
+
+详细的 Docker 部署说明请查看 [DOCKER.md](DOCKER.md)
+
+### 方式二：Docker Compose 部署
+
+适合需要自定义配置的场景：
+
+```bash
+# 克隆项目
+git clone https://github.com/luzhenhua/NCE-Flow.git
+cd NCE-Flow
+
+# 启动服务
+docker-compose up -d
+
+# 访问 http://localhost:8080
+```
+
+### 方式三：本地开发服务器
+
+1. **下载完整版**：[访问 Releases 页面](https://github.com/luzhenhua/NCE-Flow/releases)
 2. 解压后启动本地服务器：
 
-   **方法一：使用Python（推荐）**
+   **方法一：使用Python**
    ```bash
    # 在解压后的文件夹中打开终端，运行：
    python -m http.server 8000
