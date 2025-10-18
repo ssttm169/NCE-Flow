@@ -1,11 +1,5 @@
 /**
  * NCE Flow · lesson.js · iOS-Optimized Edition
- * 目标：
- *  - iOS 首次“点句子”即可播（全域解锁，无需先点系统播放按钮）
- *  - 点读：严格止于当前句（静音+暂停+钳位），不漏出下一句前缀音
- *  - 连读：无缝切句（静音→seek→seeked/canplay→两帧后解除静音）
- *  - 调度：远端 setTimeout + 近端 requestAnimationFrame（随倍速动态提前量）
- *  - 兼容：iOS Safari/Chrome、Android、桌面浏览器；倍速 0.75~2.5
  */
 
 (() => {
@@ -332,8 +326,15 @@
     }
     function endFor(it) {
       if (readMode === 'single') {
-        // 点读严格用下一句开始作为止点
-        return (it.end && it.end > it.start) ? it.end : (it.start + 0.01);
+        // 点读：使用 LRC 中预设的结束时间，如果没有则用下一句开始时间
+        if (it.end && it.end > it.start) return it.end;
+        // 找到下一个句子的开始时间作为结束时间
+        const idx = items ? items.indexOf(it) : -1;
+        if (idx >= 0 && idx + 1 < items.length) {
+          return items[idx + 1].start || it.start + 0.2;
+        }
+        // 最后一句，给一个合理的默认时长
+        return it.start + 0.5;
       }
       return computeEnd(it);
     }
@@ -381,14 +382,9 @@
               if (currentIdx + 1 < items.length) playSegment(currentIdx + 1);
               else { audio.pause(); if (autoContinueMode === 'auto') autoNextLesson(); }
             } else {
-              // 点读：静音→暂停→钳位到句尾，彻底避免“下一句前缀音”
-              const dur = Number(audio.duration);
-              audio.muted = true;
-              try { audio.pause(); } catch(_) {}
-              const clamp = Number.isFinite(dur) ? Math.min(endSnap, Math.max(0, dur - 0.05)) : endSnap;
-              try { audio.currentTime = clamp; } catch(_) {}
-              // 保持暂停，稍后用户点播再解除静音
-              setTimeout(() => { audio.muted = false; }, 0);
+              // 点读：使用老版本的直接暂停方式，避免复杂导致的时序问题
+              audio.pause();
+              audio.currentTime = endSnap;
             }
           } else {
             segmentRaf = raf(step);
@@ -517,6 +513,13 @@
       if (segmentStartWallclock && now - segmentStartWallclock < 350) return;
 
       const t = audio.currentTime;
+
+      // 点读模式下的安全网检查（参考老版本）
+      if (readMode === 'single' && segmentEnd && t >= segmentEnd && !audio.paused) {
+        audio.pause();
+        audio.currentTime = segmentEnd;
+      }
+
       for (let i = 0; i < items.length; i++) {
         const it = items[i];
         const segEnd = endFor(it);
