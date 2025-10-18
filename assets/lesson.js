@@ -324,16 +324,24 @@
       if (it.end && it.end > it.start) return it.end;
       return Math.max(0, (it.start || 0) + fallback);
     }
+    // 单句模式提前量，参考老版本：提前 0.5s 结束，避免读到下一句的前缀
+    const SINGLE_CUTOFF = 0.5;
+    const MIN_SEG_DUR = 0.2;
     function endFor(it) {
       if (readMode === 'single') {
-        // 点读：使用 LRC 中预设的结束时间，如果没有则用下一句开始时间
-        if (it.end && it.end > it.start) return it.end;
-        // 找到下一个句子的开始时间作为结束时间
-        const idx = items ? items.indexOf(it) : -1;
-        if (idx >= 0 && idx + 1 < items.length) {
-          return items[idx + 1].start || it.start + 0.2;
+        // 取下一句开始时间作为结束基准，并减去提前量
+        let baseEnd = 0;
+        if (it.end && it.end > it.start) baseEnd = it.end;
+        else {
+          const i = items ? items.indexOf(it) : -1;
+          if (i >= 0 && i + 1 < items.length) baseEnd = items[i + 1].start || 0;
         }
-        // 最后一句，给一个合理的默认时长
+        // 计算单句的目标结束时间：基准-提前量，且不小于最小时长
+        if (baseEnd > 0) {
+          const e = Math.max(it.start + MIN_SEG_DUR, baseEnd - SINGLE_CUTOFF);
+          return e;
+        }
+        // 无可用基准：给一个保守默认值
         return it.start + 0.5;
       }
       return computeEnd(it);
@@ -501,24 +509,25 @@
     });
 
     // --------------------------
-    // 轻量 timeupdate：只做高亮/存档
+    // 轻量 timeupdate：优先做点读安全停止，其次做高亮/存档
     // --------------------------
     let lastUpdateTime = 0;
     audio.addEventListener('timeupdate', () => {
+      const t = audio.currentTime;
+      // 点读模式优先：一旦达到段末，立即停止并钳位到段末
+      if (readMode === 'single' && segmentEnd && t >= segmentEnd && !audio.paused) {
+        audio.pause();
+        audio.currentTime = segmentEnd;
+        // 直接返回，避免本次循环内再做额外计算
+        return;
+      }
+
       const now = performance.now();
       if (now - lastUpdateTime < 200) return;
       lastUpdateTime = now;
 
-      // 段首 350ms 内避免重活，降低抖动
+      // 段首 350ms 内避免重活，降低抖动（不影响上面的点读安全停止）
       if (segmentStartWallclock && now - segmentStartWallclock < 350) return;
-
-      const t = audio.currentTime;
-
-      // 点读模式下的安全网检查（参考老版本）
-      if (readMode === 'single' && segmentEnd && t >= segmentEnd && !audio.paused) {
-        audio.pause();
-        audio.currentTime = segmentEnd;
-      }
 
       for (let i = 0; i < items.length; i++) {
         const it = items[i];
