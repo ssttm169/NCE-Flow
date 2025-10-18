@@ -367,6 +367,8 @@
     function scheduleAdvance() {
       clearAdvance(); isScheduling = false; scheduleTime = 0;
       if (audio.paused) return;
+      // 连读模式下不做逐句调度，避免 iOS 在边界 seek 造成的卡顿
+      if (readMode === 'continuous') return;
       if (!(segmentEnd && idx >= 0)) return;
 
       const rate = Math.max(0.0001, audio.playbackRate || 1);
@@ -386,14 +388,9 @@
             isScheduling = false; scheduleTime = 0;
             const currentIdx = idx;
 
-            if (readMode === 'continuous') {
-              if (currentIdx + 1 < items.length) playSegment(currentIdx + 1);
-              else { audio.pause(); if (autoContinueMode === 'auto') autoNextLesson(); }
-            } else {
-              // 点读：使用老版本的直接暂停方式，避免复杂导致的时序问题
-              audio.pause();
-              audio.currentTime = endSnap;
-            }
+            // 点读：使用老版本的直接暂停方式，避免复杂导致的时序问题
+            audio.pause();
+            audio.currentTime = endSnap;
           } else {
             segmentRaf = raf(step);
           }
