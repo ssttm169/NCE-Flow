@@ -440,6 +440,10 @@
     const shortcutsDone = qs('#shortcutsDone');
 
     function openShortcuts(){
+      // 先关闭设置面板，避免两个面板叠加显示
+      if (settingsPanel && !settingsPanel.hidden) {
+        closeSettings();
+      }
       if (shortcutsOverlay) { shortcutsOverlay.hidden = false; requestAnimationFrame(()=>shortcutsOverlay.classList.add('show')); }
       if (shortcutsPanel)   { shortcutsPanel.hidden = false;   requestAnimationFrame(()=>shortcutsPanel.classList.add('show')); }
       try { _prevFocus = document.activeElement; } catch(_) {}
