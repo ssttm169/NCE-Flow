@@ -327,13 +327,22 @@ footer p{
   color:var(--text);
   background:color-mix(in srgb, var(--surface) 50%, transparent);
 }
-.byline a, .thanks a{
+.byline a, .thanks a, .version a{
   color:var(--muted);
   text-decoration:none;
   transition:color .2s ease;
 }
-.byline a:hover, .thanks a:hover{
+.byline a:hover, .thanks a:hover, .version a:hover{
   color:var(--accent);
+}
+.version{
+  font-size:12px;
+  margin-top:8px;
+  opacity:0.7;
+}
+.version a{
+  font-family:-apple-system, BlinkMacSystemFont, "SF Mono", "Monaco", "Cascadia Code", monospace;
+  letter-spacing:0.3px;
 }
 
 /* Sections on index (e.g., recents) */
