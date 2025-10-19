@@ -139,21 +139,14 @@ NCE-Flow/
 
 感谢所有为本项目点赞、提出建议和反馈的朋友们！
 
-## 支持项目
-
-如果这个项目对你有帮助，可以通过以下方式支持：
-
-- ⭐ 给项目点个 Star
-- 🐛 提交 Issue 反馈问题
-- 💡 提交 PR 贡献代码
-- ☕ [请我喝杯咖啡](https://afdian.com/a/luzhenhua)（爱发电）
-
 ## 许可证
 
 [MIT License](LICENSE)
 
 ---
 
-如果这个项目对你有帮助，请给个 Star 支持一下！
+如果这个项目对你有帮助，请给个 Star ⭐ 支持一下！
+
+你也可以通过 [爱发电](https://afdian.com/a/luzhenhua) ☕ 请我喝杯咖啡
 
 Made with ❤️ by [Luzhenhua](https://luzhenhua.cn)
