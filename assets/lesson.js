@@ -440,9 +440,12 @@
     const shortcutsDone = qs('#shortcutsDone');
 
     function openShortcuts(){
-      // 先关闭设置面板，避免两个面板叠加显示
+      // 先立即关闭设置面板,避免两个面板叠加显示
       if (settingsPanel && !settingsPanel.hidden) {
-        closeSettings();
+        disableTrap();
+        if (settingsOverlay) { settingsOverlay.classList.remove('show'); settingsOverlay.hidden = true; }
+        if (settingsPanel) { settingsPanel.classList.remove('show'); settingsPanel.hidden = true; }
+        try { document.body.style.overflow = ''; } catch(_) {}
       }
       if (shortcutsOverlay) { shortcutsOverlay.hidden = false; requestAnimationFrame(()=>shortcutsOverlay.classList.add('show')); }
       if (shortcutsPanel)   { shortcutsPanel.hidden = false;   requestAnimationFrame(()=>shortcutsPanel.classList.add('show')); }
@@ -463,10 +466,15 @@
     // 快捷键面板"返回设置"按钮
     const shortcutsBack = qs('#shortcutsBack');
     if (shortcutsBack) {
-      shortcutsBack.addEventListener('click', () => {
-        closeShortcuts();
-        // 延迟打开设置面板，确保快捷键面板关闭动画完成
-        setTimeout(() => openSettings(), 250);
+      shortcutsBack.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // 立即关闭快捷键面板
+        if (shortcutsOverlay) { shortcutsOverlay.classList.remove('show'); shortcutsOverlay.hidden = true; }
+        if (shortcutsPanel) { shortcutsPanel.classList.remove('show'); shortcutsPanel.hidden = true; }
+        try { document.body.style.overflow = ''; } catch(_) {}
+        // 立即打开设置面板
+        openSettings();
       });
     }
 
