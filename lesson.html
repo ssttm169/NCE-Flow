@@ -80,11 +80,16 @@
           <div class="settings-desc">连读：自动播放下一句；点读：只播放你点的那一句。</div>
         </div>
         <div class="settings-control">
-          <div id="readModeSeg" class="segmented tiny" role="tablist" aria-label="阅读模式">
-            <button class="seg" data-read="continuous" aria-selected="true">连读</button>
-            <button class="seg" data-read="single" aria-selected="false">点读</button>
+          <div id="readModeCard" class="auto-continue-card" role="radiogroup" aria-label="阅读模式">
+            <div class="auto-continue-option">
+              <input type="radio" id="readModeContinuous" name="readMode" value="continuous" checked>
+              <label for="readModeContinuous">连读</label>
+            </div>
+            <div class="auto-continue-option">
+              <input type="radio" id="readModeSingle" name="readMode" value="single">
+              <label for="readModeSingle">点读</label>
+            </div>
           </div>
-          <button id="modeToggle" class="back-inline" aria-label="阅读模式" aria-pressed="true" data-mode="continuous">连读</button>
         </div>
       </div>
       <div class="settings-group">
@@ -111,13 +116,83 @@
           <div class="settings-desc">播放时自动滚动定位到当前句子；关闭后不自动滚动。</div>
         </div>
         <div class="settings-control">
-          <button id="followToggle" class="back-inline" aria-label="自动跟随" aria-pressed="true" data-follow="true">跟随</button>
+          <div id="followCard" class="auto-continue-card" role="radiogroup" aria-label="自动跟随">
+            <div class="auto-continue-option">
+              <input type="radio" id="followOn" name="autoFollow" value="true" checked>
+              <label for="followOn">跟随</label>
+            </div>
+            <div class="auto-continue-option">
+              <input type="radio" id="followOff" name="autoFollow" value="false">
+              <label for="followOff">不跟随</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-left">
+          <div class="settings-label">快捷键</div>
+          <div class="settings-desc">使用键盘快捷键提升学习效率。</div>
+        </div>
+        <div class="settings-control">
+          <button id="shortcutsToggle" class="back-inline" aria-label="快捷键帮助">查看</button>
         </div>
       </div>
     </div>
     <div class="settings-footer">
       <button id="settingsReset" class="btn">恢复默认</button>
       <button id="settingsDone" class="btn-nav">完成</button>
+    </div>
+  </div>
+
+  <!-- Shortcuts Help Panel -->
+  <div id="shortcutsOverlay" class="settings-overlay" hidden></div>
+  <div id="shortcutsPanel" class="settings-panel shortcuts-panel" role="dialog" aria-modal="true" aria-labelledby="shortcutsTitle" hidden>
+    <div class="settings-header">
+      <h2 id="shortcutsTitle">快捷键</h2>
+      <button id="shortcutsClose" class="icon-btn" aria-label="关闭快捷键帮助" title="关闭">
+        <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M5 5 L15 15 M15 5 L5 15"></path>
+        </svg>
+      </button>
+    </div>
+    <div class="settings-body">
+      <div class="shortcuts-group">
+        <h3>播放控制</h3>
+        <div class="shortcut-item">
+          <kbd>Space</kbd>
+          <span>播放 / 暂停</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>R</kbd>
+          <span>重播当前句</span>
+        </div>
+      </div>
+      <div class="shortcuts-group">
+        <h3>句子导航</h3>
+        <div class="shortcut-item">
+          <kbd>→</kbd> 或 <kbd>D</kbd>
+          <span>下一句</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>←</kbd> 或 <kbd>A</kbd>
+          <span>上一句</span>
+        </div>
+      </div>
+      <div class="shortcuts-group">
+        <h3>音量控制</h3>
+        <div class="shortcut-item">
+          <kbd>↑</kbd>
+          <span>增加音量</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>↓</kbd>
+          <span>减少音量</span>
+        </div>
+      </div>
+    </div>
+    <div class="settings-footer">
+      <div></div>
+      <button id="shortcutsDone" class="btn-nav">完成</button>
     </div>
   </div>
 </body>

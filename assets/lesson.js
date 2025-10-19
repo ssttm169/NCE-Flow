@@ -91,9 +91,6 @@
     const prevLessonLink = qs('#prevLesson');
     const nextLessonLink = qs('#nextLesson');
     const speedButton = qs('#speed');
-    const modeToggle = qs('#modeToggle');
-    const readModeSeg = qs('#readModeSeg');
-    const followToggle = qs('#followToggle');
 
     // 本地存储键
     const RECENT_KEY = 'nce_recents';
@@ -164,28 +161,49 @@
     // --------------------------
     function reflectReadMode() {
       const isContinuous = readMode === 'continuous';
-      if (modeToggle) {
-        modeToggle.textContent = isContinuous ? '连读' : '点读';
-        modeToggle.setAttribute('aria-pressed', isContinuous ? 'true' : 'false');
-        modeToggle.dataset.mode = readMode;
+      const continuousRadio = document.getElementById('readModeContinuous');
+      const singleRadio = document.getElementById('readModeSingle');
+      if (continuousRadio && singleRadio) {
+        continuousRadio.checked = isContinuous;
+        singleRadio.checked = !isContinuous;
       }
-      if (readModeSeg) {
-        const btns = readModeSeg.querySelectorAll('.seg');
-        btns.forEach(btn => {
-          const v = btn.getAttribute('data-read');
-          const active = (v === readMode);
-          btn.classList.toggle('active', active);
-          btn.setAttribute('aria-selected', active ? 'true' : 'false');
-        });
-      }
+
+      // 控制自动续播选项的启用/禁用状态
       const autoContinueCard = document.getElementById('autoContinueCard');
-      if (autoContinueCard) autoContinueCard.style.display = isContinuous ? 'inline-flex' : 'none';
+      const autoContinueAutoRadio = document.getElementById('autoContinueAuto');
+      const autoContinueAutoLabel = document.querySelector('label[for="autoContinueAuto"]');
+
+      if (!isContinuous) {
+        // 点读模式：禁用"自动续播"选项，并强制选中"本课结束"
+        if (autoContinueAutoRadio) {
+          autoContinueAutoRadio.disabled = true;
+        }
+        if (autoContinueAutoLabel) {
+          autoContinueAutoLabel.style.opacity = '0.5';
+          autoContinueAutoLabel.style.cursor = 'not-allowed';
+        }
+        // 强制切换到"本课结束"
+        if (autoContinueMode === 'auto') {
+          setAutoContinueMode('single');
+        }
+      } else {
+        // 连读模式：启用"自动续播"选项
+        if (autoContinueAutoRadio) {
+          autoContinueAutoRadio.disabled = false;
+        }
+        if (autoContinueAutoLabel) {
+          autoContinueAutoLabel.style.opacity = '';
+          autoContinueAutoLabel.style.cursor = '';
+        }
+      }
     }
     function reflectFollowMode() {
-      if (!followToggle) return;
-      followToggle.textContent = autoFollow ? '跟随' : '不跟随';
-      followToggle.setAttribute('aria-pressed', autoFollow ? 'true' : 'false');
-      followToggle.dataset.follow = autoFollow;
+      const followOnRadio = document.getElementById('followOn');
+      const followOffRadio = document.getElementById('followOff');
+      if (followOnRadio && followOffRadio) {
+        followOnRadio.checked = autoFollow;
+        followOffRadio.checked = !autoFollow;
+      }
     }
     function reflectAutoContinueMode() {
       const singleRadio = document.getElementById('autoContinueSingle');
@@ -217,17 +235,36 @@
       reflectAutoContinueMode();
     }
 
-    if (modeToggle) modeToggle.addEventListener('click', () => setReadMode(readMode === 'continuous' ? 'single' : 'continuous'));
-    if (readModeSeg) readModeSeg.addEventListener('click', (e) => {
-      const b = e.target.closest('.seg'); if (!b) return; const v = b.getAttribute('data-read');
-      setReadMode(v === 'single' ? 'single' : 'continuous');
-    });
-    if (followToggle) followToggle.addEventListener('click', () => setFollowMode(!autoFollow));
+    // 阅读模式单选按钮事件
+    const readModeContinuous = document.getElementById('readModeContinuous');
+    const readModeSingle = document.getElementById('readModeSingle');
+    if (readModeContinuous) readModeContinuous.addEventListener('change', () => { if (readModeContinuous.checked) setReadMode('continuous'); });
+    if (readModeSingle) readModeSingle.addEventListener('change', () => { if (readModeSingle.checked) setReadMode('single'); });
 
+    // 自动跟随单选按钮事件
+    const followOn = document.getElementById('followOn');
+    const followOff = document.getElementById('followOff');
+    if (followOn) followOn.addEventListener('change', () => { if (followOn.checked) setFollowMode(true); });
+    if (followOff) followOff.addEventListener('change', () => { if (followOff.checked) setFollowMode(false); });
+
+    // 自动续播单选按钮事件
     const singleRadio = document.getElementById('autoContinueSingle');
     const autoRadio  = document.getElementById('autoContinueAuto');
     if (singleRadio) singleRadio.addEventListener('change', () => { if (singleRadio.checked) setAutoContinueMode('single'); });
-    if (autoRadio)   autoRadio.addEventListener('change',  () => { if (autoRadio.checked)   setAutoContinueMode('auto'); });
+    if (autoRadio) {
+      autoRadio.addEventListener('change', () => { if (autoRadio.checked) setAutoContinueMode('auto'); });
+
+      // 当禁用时点击，显示提示
+      const autoLabel = document.querySelector('label[for="autoContinueAuto"]');
+      if (autoLabel) {
+        autoLabel.addEventListener('click', (e) => {
+          if (autoRadio.disabled) {
+            e.preventDefault();
+            showNotification('请先切换到连读模式');
+          }
+        });
+      }
+    }
 
     // 倍速
     audio.playbackRate = savedRate;
@@ -293,7 +330,192 @@
     if (settingsOverlay) settingsOverlay.addEventListener('click', closeSettings);
     if (settingsClose)   settingsClose.addEventListener('click', closeSettings);
     if (settingsDone)    settingsDone.addEventListener('click', closeSettings);
-    document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeSettings(); });
+
+    // 快捷键帮助面板
+    const shortcutsBtn = qs('#shortcutsToggle');
+    const shortcutsOverlay = qs('#shortcutsOverlay');
+    const shortcutsPanel = qs('#shortcutsPanel');
+    const shortcutsClose = qs('#shortcutsClose');
+    const shortcutsDone = qs('#shortcutsDone');
+
+    function openShortcuts(){
+      if (shortcutsOverlay) { shortcutsOverlay.hidden = false; requestAnimationFrame(()=>shortcutsOverlay.classList.add('show')); }
+      if (shortcutsPanel)   { shortcutsPanel.hidden = false;   requestAnimationFrame(()=>shortcutsPanel.classList.add('show')); }
+      try { _prevFocus = document.activeElement; } catch(_) {}
+      try { document.body.style.overflow = 'hidden'; } catch(_) {}
+    }
+    function closeShortcuts(){
+      if (shortcutsOverlay) { shortcutsOverlay.classList.remove('show'); setTimeout(()=>shortcutsOverlay.hidden = true, 200); }
+      if (shortcutsPanel)   { shortcutsPanel.classList.remove('show');   setTimeout(()=>shortcutsPanel.hidden = true, 200); }
+      try { document.body.style.overflow = ''; } catch(_) {}
+      try { if (_prevFocus && _prevFocus.focus) _prevFocus.focus(); } catch(_) {}
+    }
+    if (shortcutsBtn)     shortcutsBtn.addEventListener('click', openShortcuts);
+    if (shortcutsOverlay) shortcutsOverlay.addEventListener('click', closeShortcuts);
+    if (shortcutsClose)   shortcutsClose.addEventListener('click', closeShortcuts);
+    if (shortcutsDone)    shortcutsDone.addEventListener('click', closeShortcuts);
+
+    // Escape 键处理：优先关闭快捷键面板，然后关闭设置面板
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (shortcutsPanel && !shortcutsPanel.hidden) {
+          closeShortcuts();
+        } else {
+          closeSettings();
+        }
+      }
+    });
+
+    // --------------------------
+    // 全局快捷键
+    // --------------------------
+    // 音量提示UI
+    let volumeToastTimer = 0;
+    function showVolumeToast(volume) {
+      const percentage = Math.round(volume * 100);
+      let toast = document.getElementById('volumeToast');
+
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'volumeToast';
+        toast.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: var(--surface);
+          color: var(--text);
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          padding: 20px 30px;
+          box-shadow: var(--shadow);
+          z-index: 2000;
+          backdrop-filter: saturate(120%) blur(10px);
+          font-size: 18px;
+          font-weight: 500;
+          min-width: 120px;
+          text-align: center;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+        `;
+        document.body.appendChild(toast);
+      }
+
+      toast.textContent = `音量 ${percentage}%`;
+      toast.style.opacity = '1';
+
+      if (volumeToastTimer) clearTimeout(volumeToastTimer);
+      volumeToastTimer = setTimeout(() => {
+        toast.style.opacity = '0';
+      }, 1000);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // 避免在输入框中触发快捷键
+      const target = e.target;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      // ? 键 - 打开/关闭快捷键帮助
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        if (shortcutsPanel && !shortcutsPanel.hidden) {
+          closeShortcuts();
+        } else {
+          openShortcuts();
+        }
+        return;
+      }
+
+      // ArrowUp - 音量增加（优先处理，避免和其他按键冲突）
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const newVolume = Math.min(1, audio.volume + 0.1);
+        audio.volume = newVolume;
+        try { localStorage.setItem('nce_volume', newVolume); } catch(_) {}
+        showVolumeToast(newVolume);
+        return;
+      }
+
+      // ArrowDown - 音量减少（优先处理，避免和其他按键冲突）
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const newVolume = Math.max(0, audio.volume - 0.1);
+        audio.volume = newVolume;
+        try { localStorage.setItem('nce_volume', newVolume); } catch(_) {}
+        showVolumeToast(newVolume);
+        return;
+      }
+
+      // Space - 播放/暂停
+      if (e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        if (audio.paused) {
+          // 点读模式下的智能跳转：如果当前在句末（说明是自动暂停的），跳到下一句
+          if (readMode === 'single' && idx >= 0 && segmentEnd > 0) {
+            const currentTime = audio.currentTime;
+            const tolerance = 0.1; // 容错范围 100ms
+            // 判断是否在当前句末尾（自动暂停的位置）
+            if (Math.abs(currentTime - segmentEnd) < tolerance) {
+              // 在句末，跳到下一句
+              const nextIdx = Math.min(idx + 1, items.length - 1);
+              if (nextIdx < items.length && nextIdx !== idx) {
+                playSegment(nextIdx, { manual: true });
+                return;
+              }
+              // 如果已经是最后一句，则重播当前句
+              playSegment(idx, { manual: true });
+              return;
+            }
+          }
+
+          // 其他情况：正常播放
+          if (idx < 0 && items.length > 0) {
+            // 如果没有选中任何句子，从第一句开始
+            playSegment(0, { manual: true });
+          } else {
+            const p = audio.play();
+            if (p && p.catch) p.catch(() => {});
+          }
+        } else {
+          audio.pause();
+        }
+        return;
+      }
+
+      // ArrowRight 或 D - 下一句
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        const nextIdx = idx < 0 ? 0 : Math.min(idx + 1, items.length - 1);
+        if (nextIdx < items.length) {
+          playSegment(nextIdx, { manual: true });
+        }
+        return;
+      }
+
+      // ArrowLeft 或 A - 上一句
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        const prevIdx = idx < 0 ? 0 : Math.max(idx - 1, 0);
+        if (prevIdx >= 0) {
+          playSegment(prevIdx, { manual: true });
+        }
+        return;
+      }
+
+      // R - 重播当前句
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        if (idx >= 0 && idx < items.length) {
+          playSegment(idx, { manual: true });
+        } else if (items.length > 0) {
+          // 如果没有当前句，播放第一句
+          playSegment(0, { manual: true });
+        }
+        return;
+      }
+    });
 
     const settingsReset = qs('#settingsReset');
     if (settingsReset){
@@ -386,7 +608,6 @@
           const now = audio.currentTime;
           if (now >= endSnap - guard) {
             isScheduling = false; scheduleTime = 0;
-            const currentIdx = idx;
 
             // 点读：使用老版本的直接暂停方式，避免复杂导致的时序问题
             audio.pause();
@@ -633,6 +854,14 @@
     // --------------------------
     // 启动：装载音频/LRC + 断点恢复
     // --------------------------
+    // 恢复保存的音量
+    try {
+      const savedVolume = parseFloat(localStorage.getItem('nce_volume'));
+      if (!isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
+        audio.volume = savedVolume;
+      }
+    } catch(_) {}
+
     // 重要：iOS 上尽早设定 preload，有助于更快拿到 metadata
     try { audio.preload = 'auto'; } catch(_) {}
     audio.src = mp3;

@@ -271,6 +271,8 @@ body::before{
 .auto-continue-option label{display:block; padding:6px 10px; font-size:12px; color:var(--text); cursor:pointer; border-radius:999px; transition:all 0.15s ease; margin:0; white-space:nowrap;}
 .auto-continue-option input[type="radio"]:checked + label{background:color-mix(in srgb, var(--accent) 20%, var(--card)); color:var(--accent); box-shadow:var(--shadow);}
 .auto-continue-option:hover label{background:color-mix(in srgb, var(--surface) 80%, transparent);}
+.auto-continue-option input[type="radio"]:disabled + label{opacity:0.5; cursor:not-allowed;}
+.auto-continue-option input[type="radio"]:disabled + label:hover{background:transparent;}
 
 @keyframes fadeIn{from{opacity:0; transform:scale(0.95);} to{opacity:1; transform:scale(1);}}
 @keyframes slideDown{from{opacity:0; transform:translate(-50%, -20px);} to{opacity:1; transform:translate(-50%, 0);}}
@@ -414,4 +416,37 @@ body, .card, .lesson-item, .sentence{ transition: background-color .35s ease, co
 /* Hide overflow-prone inline controls on small screens (defensive) */
 @media (max-width: 560px){
   .player .back-inline:not(#backLink):not(#settingsBtn){display:none}
+}
+
+/* Shortcuts Help Panel */
+.shortcuts-panel{max-height:min(90vh, 720px)}
+.shortcuts-group{padding:12px 0; border-bottom:1px solid color-mix(in srgb, var(--border) 50%, transparent)}
+.shortcuts-group:last-child{border-bottom:none}
+.shortcuts-group h3{font-size:13px; font-weight:600; color:var(--text); margin:0 0 10px 0; letter-spacing:0.3px}
+.shortcut-item{display:flex; align-items:center; justify-content:space-between; padding:8px 0; gap:12px}
+.shortcut-item kbd{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:32px;
+  height:28px;
+  padding:0 10px;
+  border-radius:6px;
+  border:1px solid var(--border);
+  background:var(--surface);
+  box-shadow:0 2px 4px rgba(0,0,0,0.08), inset 0 -1px 0 rgba(0,0,0,0.1);
+  font-family:-apple-system, BlinkMacSystemFont, "SF Mono", "Monaco", "Cascadia Code", monospace;
+  font-size:12px;
+  font-weight:500;
+  color:var(--text);
+  letter-spacing:0.3px;
+  white-space:nowrap;
+}
+.shortcut-item span{font-size:13px; color:var(--muted); flex:1; text-align:right}
+
+@media (prefers-color-scheme: light) {
+  .shortcut-item kbd{
+    background:linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+    box-shadow:0 2px 4px rgba(0,0,0,0.05), inset 0 -1px 0 rgba(0,0,0,0.06);
+  }
 }
