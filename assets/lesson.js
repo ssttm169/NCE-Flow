@@ -98,6 +98,7 @@
     const MODE_KEY = 'readMode';
     const FOLLOW_KEY = 'autoFollow';
     const AUTO_CONTINUE_KEY = 'autoContinue';
+    const LOOP_MODE_KEY = 'loopMode';
 
     // 状态
     let items = [];
@@ -125,10 +126,11 @@
     if (isNaN(savedRate) || !rates.includes(savedRate)) savedRate = DEFAULT_RATE;
     let currentRateIndex = Math.max(0, rates.indexOf(savedRate));
 
-    // 读取模式/跟随/续播
+    // 读取模式/跟随/续播/循环
     let readMode = (localStorage.getItem(MODE_KEY) === 'single') ? 'single' : 'continuous';
     let autoFollow = (localStorage.getItem(FOLLOW_KEY) === 'false') ? false : true;
     let autoContinueMode = (localStorage.getItem(AUTO_CONTINUE_KEY) === 'auto') ? 'auto' : 'single';
+    let loopMode = localStorage.getItem(LOOP_MODE_KEY) || 'none'; // 'none' | 'single' | 'all'
 
     // --------------------------
     // iOS 解锁：首次任意交互即解锁
@@ -196,6 +198,54 @@
           autoContinueAutoLabel.style.cursor = '';
         }
       }
+
+      // 控制循环模式选项的启用/禁用状态
+      const loopSingleRadio = document.getElementById('loopSingle');
+      const loopSingleLabel = document.querySelector('label[for="loopSingle"]');
+      const loopAllRadio = document.getElementById('loopAll');
+      const loopAllLabel = document.querySelector('label[for="loopAll"]');
+
+      if (isContinuous) {
+        // 连读模式：禁用"单句循环"，启用"整篇循环"
+        if (loopSingleRadio) {
+          loopSingleRadio.disabled = true;
+        }
+        if (loopSingleLabel) {
+          loopSingleLabel.style.opacity = '0.5';
+          loopSingleLabel.style.cursor = 'not-allowed';
+        }
+        if (loopAllRadio) {
+          loopAllRadio.disabled = false;
+        }
+        if (loopAllLabel) {
+          loopAllLabel.style.opacity = '';
+          loopAllLabel.style.cursor = '';
+        }
+        // 如果当前是单句循环，自动切换到不循环
+        if (loopMode === 'single') {
+          setLoopMode('none');
+        }
+      } else {
+        // 点读模式：启用"单句循环"，禁用"整篇循环"
+        if (loopSingleRadio) {
+          loopSingleRadio.disabled = false;
+        }
+        if (loopSingleLabel) {
+          loopSingleLabel.style.opacity = '';
+          loopSingleLabel.style.cursor = '';
+        }
+        if (loopAllRadio) {
+          loopAllRadio.disabled = true;
+        }
+        if (loopAllLabel) {
+          loopAllLabel.style.opacity = '0.5';
+          loopAllLabel.style.cursor = 'not-allowed';
+        }
+        // 如果当前是整篇循环，自动切换到不循环
+        if (loopMode === 'all') {
+          setLoopMode('none');
+        }
+      }
     }
     function reflectFollowMode() {
       const followOnRadio = document.getElementById('followOn');
@@ -213,7 +263,17 @@
         autoRadio.checked = autoContinueMode === 'auto';
       }
     }
-    reflectReadMode(); reflectFollowMode(); reflectAutoContinueMode();
+    function reflectLoopMode() {
+      const loopNoneRadio = document.getElementById('loopNone');
+      const loopSingleRadio = document.getElementById('loopSingle');
+      const loopAllRadio = document.getElementById('loopAll');
+      if (loopNoneRadio && loopSingleRadio && loopAllRadio) {
+        loopNoneRadio.checked = loopMode === 'none';
+        loopSingleRadio.checked = loopMode === 'single';
+        loopAllRadio.checked = loopMode === 'all';
+      }
+    }
+    reflectReadMode(); reflectFollowMode(); reflectAutoContinueMode(); reflectLoopMode();
 
     function setReadMode(mode) {
       readMode = (mode === 'single') ? 'single' : 'continuous';
@@ -233,6 +293,12 @@
       autoContinueMode = (mode === 'auto') ? 'auto' : 'single';
       try { localStorage.setItem(AUTO_CONTINUE_KEY, autoContinueMode); } catch(_) {}
       reflectAutoContinueMode();
+    }
+    function setLoopMode(mode) {
+      if (!['none', 'single', 'all'].includes(mode)) mode = 'none';
+      loopMode = mode;
+      try { localStorage.setItem(LOOP_MODE_KEY, loopMode); } catch(_) {}
+      reflectLoopMode();
     }
 
     // 阅读模式单选按钮事件
@@ -260,7 +326,41 @@
         autoLabel.addEventListener('click', (e) => {
           if (autoRadio.disabled) {
             e.preventDefault();
-            showNotification('请先切换到连读模式');
+            showNotification('自动续播仅在连读模式下可用');
+          }
+        });
+      }
+    }
+
+    // 循环模式单选按钮事件
+    const loopNoneRadio = document.getElementById('loopNone');
+    const loopSingleRadio = document.getElementById('loopSingle');
+    const loopAllRadio = document.getElementById('loopAll');
+    if (loopNoneRadio) loopNoneRadio.addEventListener('change', () => { if (loopNoneRadio.checked) setLoopMode('none'); });
+    if (loopSingleRadio) {
+      loopSingleRadio.addEventListener('change', () => { if (loopSingleRadio.checked) setLoopMode('single'); });
+
+      // 当禁用时点击，显示提示
+      const loopSingleLabel = document.querySelector('label[for="loopSingle"]');
+      if (loopSingleLabel) {
+        loopSingleLabel.addEventListener('click', (e) => {
+          if (loopSingleRadio.disabled) {
+            e.preventDefault();
+            showNotification('单句循环仅在点读模式下可用');
+          }
+        });
+      }
+    }
+    if (loopAllRadio) {
+      loopAllRadio.addEventListener('change', () => { if (loopAllRadio.checked) setLoopMode('all'); });
+
+      // 当禁用时点击，显示提示
+      const loopAllLabel = document.querySelector('label[for="loopAll"]');
+      if (loopAllLabel) {
+        loopAllLabel.addEventListener('click', (e) => {
+          if (loopAllRadio.disabled) {
+            e.preventDefault();
+            showNotification('整篇循环仅在连读模式下可用');
           }
         });
       }
@@ -736,6 +836,14 @@
       if (readMode === 'single' && segmentEnd && t >= segmentEnd && !audio.paused) {
         audio.pause();
         audio.currentTime = segmentEnd;
+
+        // 单句循环：自动重播当前句
+        if (loopMode === 'single' && idx >= 0 && idx < items.length) {
+          setTimeout(() => {
+            playSegment(idx, { manual: true });
+          }, 100);
+        }
+
         // 直接返回，避免本次循环内再做额外计算
         return;
       }
@@ -780,7 +888,18 @@
 
     // 整体结束
     audio.addEventListener('ended', () => {
-      if (readMode === 'continuous' && autoContinueMode === 'auto') autoNextLesson();
+      // 整篇循环：从第一句重新开始
+      if (readMode === 'continuous' && loopMode === 'all' && items.length > 0) {
+        setTimeout(() => {
+          playSegment(0, { manual: true });
+        }, 100);
+        return;
+      }
+
+      // 自动续播下一课（仅在未开启整篇循环时）
+      if (readMode === 'continuous' && autoContinueMode === 'auto' && loopMode !== 'all') {
+        autoNextLesson();
+      }
     });
 
     // --------------------------

@@ -112,6 +112,28 @@
       </div>
       <div class="settings-group">
         <div class="settings-left">
+          <div class="settings-label">循环模式</div>
+          <div class="settings-desc">播完后的重复行为。</div>
+        </div>
+        <div class="settings-control">
+          <div id="loopModeCard" class="auto-continue-card" role="radiogroup" aria-label="循环模式">
+            <div class="auto-continue-option">
+              <input type="radio" id="loopNone" name="loopMode" value="none" checked>
+              <label for="loopNone">不循环</label>
+            </div>
+            <div class="auto-continue-option">
+              <input type="radio" id="loopSingle" name="loopMode" value="single">
+              <label for="loopSingle">单句循环</label>
+            </div>
+            <div class="auto-continue-option">
+              <input type="radio" id="loopAll" name="loopMode" value="all">
+              <label for="loopAll">整篇循环</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-left">
           <div class="settings-label">自动跟随</div>
           <div class="settings-desc">播放时自动滚动定位到当前句子；关闭后不自动滚动。</div>
         </div>
