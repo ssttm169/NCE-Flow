@@ -113,6 +113,7 @@
     let prevLessonHref = '';
     let nextLessonHref = '';
     let _lastSavedAt = 0;
+    let loopReplayPending = false;  // 标记是否正在等待循环重播
 
     // iOS 特有状态
     let iosUnlocked = false;         // 是否已“解锁音频”
@@ -709,9 +710,42 @@
           if (now >= endSnap - guard) {
             isScheduling = false; scheduleTime = 0;
 
-            // 点读：使用老版本的直接暂停方式，避免复杂导致的时序问题
+            // 点读：暂停在段末
+            console.log('[循环调试] scheduleAdvance到达段末，暂停播放', {
+              idx,
+              loopMode,
+              loopReplayPending,
+              currentTime: audio.currentTime,
+              segmentEnd: endSnap
+            });
             audio.pause();
             audio.currentTime = endSnap;
+
+            // 单句循环：标记循环等待，稍后重播
+            if (loopMode === 'single' && idx >= 0 && idx < items.length && !loopReplayPending) {
+              console.log('[循环调试] 设置单句循环重播，300ms后执行');
+              loopReplayPending = true;
+              setTimeout(() => {
+                console.log('[循环调试] 300ms后检查循环条件', {
+                  loopReplayPending,
+                  loopMode,
+                  idx
+                });
+                if (loopReplayPending && loopMode === 'single') {
+                  loopReplayPending = false;
+                  console.log('[循环调试] 开始执行循环重播 playSegment');
+                  playSegment(idx, { manual: false });
+                } else {
+                  console.log('[循环调试] 循环条件不满足，取消重播');
+                }
+              }, 300);
+            } else {
+              console.log('[循环调试] 不满足循环条件，不设置重播', {
+                loopMode,
+                loopReplayPending,
+                idx
+              });
+            }
           } else {
             segmentRaf = raf(step);
           }
@@ -751,9 +785,27 @@
 
     async function playSegment(i, opts) {
       const manual = !!(opts && opts.manual);
+      console.log('[循环调试] playSegment调用', {
+        idx: i,
+        manual,
+        currentIdx: idx,
+        loopReplayPending,
+        paused: audio.paused
+      });
+
       if (i < 0 || i >= items.length) return;
+
+      // 手动操作时清除循环等待标志
+      if (manual && loopReplayPending) {
+        console.log('[循环调试] 手动操作，清除循环等待标志');
+        loopReplayPending = false;
+      }
+
       // 自动流程：同句且已在播不重复
-      if (!manual && idx === i && !audio.paused) return;
+      if (!manual && idx === i && !audio.paused) {
+        console.log('[循环调试] 自动流程跳过：同句且正在播放');
+        return;
+      }
 
       // iOS：点击句子也要能“第一次就播”
       if (isIOSLike && !iosUnlocked) unlockAudioSync();
@@ -770,8 +822,10 @@
       highlight(i, manual);
 
       const cur = Math.max(0, audio.currentTime || 0);
-      // 自动前进且“新起点过近”时，给极小前移，避免抖动
-      if (!manual && start <= cur + 0.005) {
+      // 自动前进且"新起点过近"时，给极小前移，避免抖动
+      // 但循环重播(同句)时不应用此逻辑，必须回到真实起点
+      const isLoopReplay = (!manual && idx === i);
+      if (!manual && !isLoopReplay && start <= cur + 0.005) {
         const dur = Number(audio.duration);
         const eps = 0.005;
         start = Math.min(Number.isFinite(dur) ? Math.max(0, dur - 0.05) : start + eps, cur + eps);
@@ -832,18 +886,11 @@
     let lastUpdateTime = 0;
     audio.addEventListener('timeupdate', () => {
       const t = audio.currentTime;
-      // 点读模式优先：一旦达到段末，立即停止并钳位到段末
+      // 点读模式安全网：如果 scheduleAdvance 失效，这里兜底暂停
+      // （单句循环逻辑已移到 scheduleAdvance 中处理）
       if (readMode === 'single' && segmentEnd && t >= segmentEnd && !audio.paused) {
         audio.pause();
         audio.currentTime = segmentEnd;
-
-        // 单句循环：自动重播当前句
-        if (loopMode === 'single' && idx >= 0 && idx < items.length) {
-          setTimeout(() => {
-            playSegment(idx, { manual: true });
-          }, 100);
-        }
-
         // 直接返回，避免本次循环内再做额外计算
         return;
       }
@@ -870,12 +917,23 @@
 
     // 播放/暂停
     audio.addEventListener('pause', () => {
+      console.log('[循环调试] audio.pause事件触发', {
+        internalPause,
+        loopReplayPending,
+        idx,
+        currentTime: audio.currentTime
+      });
       clearAdvance(); isScheduling = false; scheduleTime = 0;
       if (!internalPause) saveLastPos(true);
       internalPause = false;
       if (scrollTimer) { clearTimeout(scrollTimer); scrollTimer = 0; }
     });
     audio.addEventListener('play', () => {
+      console.log('[循环调试] audio.play事件触发', {
+        idx,
+        loopReplayPending,
+        currentTime: audio.currentTime
+      });
       setTimeout(() => scheduleAdvance(), 50);
       touchRecent();
       internalPause = false;
