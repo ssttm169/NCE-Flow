@@ -460,6 +460,16 @@
     if (shortcutsClose)   shortcutsClose.addEventListener('click', closeShortcuts);
     if (shortcutsDone)    shortcutsDone.addEventListener('click', closeShortcuts);
 
+    // 快捷键面板"返回设置"按钮
+    const shortcutsBack = qs('#shortcutsBack');
+    if (shortcutsBack) {
+      shortcutsBack.addEventListener('click', () => {
+        closeShortcuts();
+        // 延迟打开设置面板，确保快捷键面板关闭动画完成
+        setTimeout(() => openSettings(), 250);
+      });
+    }
+
     // Escape 键处理：优先关闭快捷键面板，然后关闭设置面板
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
