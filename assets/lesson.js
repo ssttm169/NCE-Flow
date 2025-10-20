@@ -389,7 +389,6 @@
       backLink.setAttribute('href', fallback);
       backLink.addEventListener('click', (e) => {
         e.preventDefault();
-        try { const ref = document.referrer; if (ref && new URL(ref).origin === location.origin) { history.back(); return; } } catch(_) {}
         location.href = fallback;
       });
     }
