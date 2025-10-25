@@ -431,6 +431,10 @@ body, .card, .lesson-item, .sentence{ transition: background-color .35s ease, co
   font-size: 12px;
   padding: 0px 4px;
   line-height: 21px;
+  background-color: var(--accent);
+  line-height: 22px;
+  color: white;
+  border-radius: 10px;
 }
 
 
