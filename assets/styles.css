@@ -260,9 +260,28 @@ body::before{
 .sentence:hover{transform:translateY(-2px)}
 .sentence.active{border-left:4px solid var(--accent);background:color-mix(in srgb, var(--accent) 10%, var(--card))}
 .en{font-weight:700;font-size:18px}
-.cn{font-size:13px;color:var(--muted);margin-top:4px}
+.cn, .record{font-size:13px;color:var(--muted);margin-top:4px}
 .lang-en .cn{display:none}
 .lang-cn .en{display:none}
+/* .lang-none .en{display:none}
+.lang-none .cn{
+  position: relative;
+  filter: blur(3px);
+} */
+
+.retell .cn, .retell .en{
+  filter: blur(3px);
+}
+/* .lang-none .cn::before{
+  content: " ";
+  display: block;
+  line-height: 20px;
+  height: 20px;
+  width: 100%;
+  position: absolute;
+  background-color: #6e6e73;
+  border-radius: 5px;
+} */
 
 /* Auto Continue Card */
 .auto-continue-card{display:inline-flex; gap:4px; background:color-mix(in srgb, var(--bg) 70%, transparent); border:1px solid var(--border); border-radius:999px; padding:4px; backdrop-filter:saturate(120%) blur(10px); animation:fadeIn 0.2s ease-out; height:var(--control-h); align-items:center;}
@@ -399,6 +418,21 @@ a{text-decoration:none}
 
 /* Smooth theme transitions for surfaces */
 body, .card, .lesson-item, .sentence{ transition: background-color .35s ease, color .35s ease, box-shadow .35s ease, border-color .35s ease; }
+.sentence{
+  position: relative;
+}
+.sentence .score{ 
+  position: absolute;
+  right: 10px;
+  top:50%;
+  transform: translateY(-50%);
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 12px;
+  padding: 0px 4px;
+  line-height: 21px;
+}
+
 
 /* Settings Panel (Apple-like modal sheet) */
 .settings-overlay{position:fixed; inset:0; background:color-mix(in srgb, var(--bg) 30%, rgba(0,0,0,0.35)); backdrop-filter:saturate(130%) blur(12px); -webkit-backdrop-filter:saturate(130%) blur(12px); z-index:900;}
@@ -461,4 +495,15 @@ body, .card, .lesson-item, .sentence{ transition: background-color .35s ease, co
     background:linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
     box-shadow:0 2px 4px rgba(0,0,0,0.05), inset 0 -1px 0 rgba(0,0,0,0.06);
   }
+}
+
+.recording{
+  background-color: #0a84ff;
+  position:fixed;
+  bottom: 0px;
+  left:0px;
+  width: 100%;
+  cursor: pointer;
+  text-align: center;
+  padding:20px 0px;
 }

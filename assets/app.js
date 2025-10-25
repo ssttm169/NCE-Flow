@@ -1,8 +1,8 @@
 (() => {
   const LANG_KEY = 'nce_lang_mode'; // 'en' | 'bi' | 'cn'
-  function getLang(){ const v=localStorage.getItem(LANG_KEY); return (v==='en'||v==='cn'||v==='bi')?v:'bi'; }
+  function getLang(){ const v=localStorage.getItem(LANG_KEY); return (v==='en'||v==='cn'||v==='bi'||v==='none')?v:'bi'; }
   function setLang(v){ localStorage.setItem(LANG_KEY,v); applyLang(v); }
-  function applyLang(v){ document.body.classList.remove('lang-en','lang-bi','lang-cn'); document.body.classList.add('lang-'+v); }
+  function applyLang(v){ document.body.classList.remove('lang-en','lang-bi','lang-cn','lang-none'); document.body.classList.add('lang-'+v); }
   function initSegmented(container){
     const segs = container?.querySelectorAll('[data-mode]'); if(!segs) return;
     const current = getLang(); applyLang(current);

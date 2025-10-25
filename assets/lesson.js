@@ -10,6 +10,167 @@
   const TIME_RE = /\[(\d+):(\d+(?:\.\d+)?)\]/g;
   const META_RE = /^\[(al|ar|ti|by):(.+)\]$/i;
 
+  // --------------------------
+  // 文字匹配功能
+  // --------------------------
+  function matchText(originalText, inputText) {
+    if (!originalText || !inputText) {
+      return {
+        highlightedText: originalText || '',
+        matchScore: 0
+      };
+    }
+
+    // 移除标点符号进行匹配比较
+    const removePunctuation = (text) => text.replace(/[^\w\s]/g, '').toLowerCase();
+    const originalClean = removePunctuation(originalText);
+    const inputClean = removePunctuation(inputText);
+
+    if (originalClean === inputClean) {
+      return {
+        highlightedText: originalText,
+        matchScore: 100
+      };
+    }
+
+    const originalWords = originalText.split(/\s+/);
+    const inputWords = inputText.split(/\s+/);
+    const originalWordsClean = originalClean.split(/\s+/);
+    const inputWordsClean = inputClean.split(/\s+/);
+
+    let matchedWords = new Set();
+    let exactWordMatches = 0;
+
+    // 计算精确单词匹配（忽略标点符号）
+    for (let i = 0; i < inputWordsClean.length; i++) {
+      const inputWord = inputWordsClean[i];
+      for (let j = 0; j < originalWordsClean.length; j++) {
+        if (originalWordsClean[j] === inputWord) {
+          matchedWords.add(j);
+          exactWordMatches++;
+          break;
+        }
+      }
+    }
+
+    // 计算字符级别的相似度（使用清理后的文本）
+    const charSimilarity = calculateCharSimilarity(originalClean, inputClean);
+
+    // 计算综合匹配度
+    const wordMatchRatio = exactWordMatches / Math.max(originalWords.length, inputWords.length);
+    const lengthRatio = 1 - Math.abs(originalClean.length - inputClean.length) / Math.max(originalClean.length, inputClean.length);
+    const matchScore = Math.round(
+      (wordMatchRatio * 0.6 + charSimilarity * 0.3 + lengthRatio * 0.1) * 100
+    );
+
+    // 生成高亮文本
+    const highlightedText = generateHighlightedText(originalWords, matchedWords);
+
+    return {
+      highlightedText,
+      matchScore: Math.min(100, Math.max(0, matchScore))
+    };
+  }
+
+  function calculateCharSimilarity(str1, str2) {
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+
+    if (longer.length === 0) return 1.0;
+
+    const editDistance = levenshteinDistance(longer, shorter);
+    return (longer.length - editDistance) / longer.length;
+  }
+
+  function levenshteinDistance(str1, str2) {
+    const matrix = [];
+
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
+    }
+
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+
+    return matrix[str2.length][str1.length];
+  }
+
+  function generateHighlightedText(originalWords, matchedWords) {
+    return originalWords.map((word, index) => {
+      if (!matchedWords.has(index)) {
+        return `<span style="color:red;font-weight:bold;">${word}</span>`;
+      }
+      return word;
+    }).join(' ');
+  }
+
+  // 显示匹配结果
+  function showMatchResult(matchResult, transcript) {
+    // 创建或更新匹配结果显示区域
+    let matchDisplay = document.getElementById('matchDisplay');
+    if (!matchDisplay) {
+      matchDisplay = document.createElement('div');
+      matchDisplay.id = 'matchDisplay';
+      matchDisplay.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 15px;
+        box-shadow: var(--shadow);
+        z-index: 1000;
+        max-width: 300px;
+        backdrop-filter: saturate(120%) blur(10px);
+      `;
+      document.body.appendChild(matchDisplay);
+    }
+
+    const scoreColor = matchResult.matchScore >= 80 ? '#28a745' :
+      matchResult.matchScore >= 60 ? '#ffc107' : '#dc3545';
+
+    matchDisplay.innerHTML = `
+      <div style="font-weight: bold; margin-bottom: 8px; color: ${scoreColor};">
+        匹配度: ${matchResult.matchScore}%
+      </div>
+      <div style="margin-bottom: 8px;">
+        <strong>你说:</strong> ${transcript}
+      </div>
+      <div>
+        <strong>原文:</strong> <span style="font-size: 14px;">${matchResult.highlightedText}</span>
+      </div>
+    `;
+
+    // 3秒后自动隐藏
+    setTimeout(() => {
+      if (matchDisplay && matchDisplay.parentNode) {
+        matchDisplay.style.opacity = '0';
+        setTimeout(() => {
+          if (matchDisplay && matchDisplay.parentNode) {
+            matchDisplay.parentNode.removeChild(matchDisplay);
+          }
+        }, 300);
+      }
+    }, 15000);
+  }
+
   function timeTagsToSeconds(tags) {
     const m = /\[(\d+):(\d+(?:\.\d+)?)\]/.exec(tags);
     if (!m) return 0;
@@ -66,7 +227,7 @@
   // 主流程
   // --------------------------
   document.addEventListener('DOMContentLoaded', () => {
-    try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (_) {}
+    try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (_) { }
     window.scrollTo(0, 0);
 
     const hash = decodeURIComponent(location.hash.slice(1));
@@ -91,6 +252,15 @@
     const prevLessonLink = qs('#prevLesson');
     const nextLessonLink = qs('#nextLesson');
     const speedButton = qs('#speed');
+    const startListeningButton = qs('#startListeningButton');
+    const stopListeningButton = qs('#stopListeningButton');
+    const recordingControl = qs('#recording');
+    const hiddenTextButton = qs('#hiddenTextButton');
+    const showTextButton = qs('#showTextButton');
+    
+    let selectedSentence = null;
+    let isHiddenText = false;
+
 
     // 本地存储键
     const RECENT_KEY = 'nce_recents';
@@ -143,11 +313,11 @@
         const p = audio.play();        // 在同一用户手势栈内发起
         iosUnlocked = true;
         // 立即排队暂停与还原 mute（避免可闻 blip）
-        setTimeout(() => { try { audio.pause(); } catch(_) {} audio.muted = false; }, 0);
+        setTimeout(() => { try { audio.pause(); } catch (_) { } audio.muted = false; }, 0);
       } catch (_) { iosUnlocked = false; }
     }
     if (isIOSLike) {
-      const evs = ['pointerdown','touchstart','click'];
+      const evs = ['pointerdown', 'touchstart', 'click'];
       const onceUnlock = (e) => { unlockAudioSync(); evs.forEach(t => document.removeEventListener(t, onceUnlock, true)); };
       evs.forEach(t => document.addEventListener(t, onceUnlock, { capture: true, passive: true, once: true }));
     }
@@ -278,7 +448,8 @@
 
     function setReadMode(mode) {
       readMode = (mode === 'single') ? 'single' : 'continuous';
-      try { localStorage.setItem(MODE_KEY, readMode); } catch(_) {}
+      setRecordingControl(readMode)
+      try { localStorage.setItem(MODE_KEY, readMode); } catch (_) { }
       reflectReadMode();
       // 模式切换：清调度→按新模式刷新当前段末→重建调度
       clearAdvance(); isScheduling = false; scheduleTime = 0;
@@ -287,18 +458,18 @@
     }
     function setFollowMode(follow) {
       autoFollow = !!follow;
-      try { localStorage.setItem(FOLLOW_KEY, autoFollow.toString()); } catch(_) {}
+      try { localStorage.setItem(FOLLOW_KEY, autoFollow.toString()); } catch (_) { }
       reflectFollowMode();
     }
     function setAutoContinueMode(mode) {
       autoContinueMode = (mode === 'auto') ? 'auto' : 'single';
-      try { localStorage.setItem(AUTO_CONTINUE_KEY, autoContinueMode); } catch(_) {}
+      try { localStorage.setItem(AUTO_CONTINUE_KEY, autoContinueMode); } catch (_) { }
       reflectAutoContinueMode();
     }
     function setLoopMode(mode) {
       if (!['none', 'single', 'all'].includes(mode)) mode = 'none';
       loopMode = mode;
-      try { localStorage.setItem(LOOP_MODE_KEY, loopMode); } catch(_) {}
+      try { localStorage.setItem(LOOP_MODE_KEY, loopMode); } catch (_) { }
       reflectLoopMode();
     }
 
@@ -316,7 +487,7 @@
 
     // 自动续播单选按钮事件
     const singleRadio = document.getElementById('autoContinueSingle');
-    const autoRadio  = document.getElementById('autoContinueAuto');
+    const autoRadio = document.getElementById('autoContinueAuto');
     if (singleRadio) singleRadio.addEventListener('change', () => { if (singleRadio.checked) setAutoContinueMode('single'); });
     if (autoRadio) {
       autoRadio.addEventListener('change', () => { if (autoRadio.checked) setAutoContinueMode('auto'); });
@@ -377,7 +548,7 @@
     });
     audio.addEventListener('ratechange', () => {
       const r = audio.playbackRate;
-      try { localStorage.setItem('audioPlaybackRate', r); } catch(_) {}
+      try { localStorage.setItem('audioPlaybackRate', r); } catch (_) { }
       if (speedButton) speedButton.textContent = `${r.toFixed(2)}x`;
       const i = rates.indexOf(r); if (i !== -1) currentRateIndex = i;
       scheduleAdvance();
@@ -395,14 +566,14 @@
 
     // 设置面板（沿用你的结构）
     let _prevFocus = null; let _trapHandler = null;
-    function getFocusable(root){
+    function getFocusable(root) {
       return root ? Array.from(root.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
-        .filter(el=>!el.hasAttribute('disabled') && el.offsetParent !== null) : [];
+        .filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null) : [];
     }
-    function enableTrap(){
+    function enableTrap() {
       if (!settingsPanel) return;
       const fs = getFocusable(settingsPanel); if (fs.length) fs[0].focus();
-      _trapHandler = (e)=>{
+      _trapHandler = (e) => {
         if (e.key !== 'Tab') return;
         const list = getFocusable(settingsPanel); if (!list.length) return;
         const first = list[0], last = list[list.length - 1];
@@ -411,25 +582,86 @@
       };
       document.addEventListener('keydown', _trapHandler);
     }
-    function disableTrap(){ if (_trapHandler) { document.removeEventListener('keydown', _trapHandler); _trapHandler = null; } }
-    function openSettings(){
-      if (settingsOverlay) { settingsOverlay.hidden = false; requestAnimationFrame(()=>settingsOverlay.classList.add('show')); }
-      if (settingsPanel)   { settingsPanel.hidden = false;   requestAnimationFrame(()=>settingsPanel.classList.add('show')); }
-      try { _prevFocus = document.activeElement; } catch(_) {}
-      try { document.body.style.overflow = 'hidden'; } catch(_) {}
+    function disableTrap() { if (_trapHandler) { document.removeEventListener('keydown', _trapHandler); _trapHandler = null; } }
+    function openSettings() {
+      if (settingsOverlay) { settingsOverlay.hidden = false; requestAnimationFrame(() => settingsOverlay.classList.add('show')); }
+      if (settingsPanel) { settingsPanel.hidden = false; requestAnimationFrame(() => settingsPanel.classList.add('show')); }
+      try { _prevFocus = document.activeElement; } catch (_) { }
+      try { document.body.style.overflow = 'hidden'; } catch (_) { }
       enableTrap();
     }
-    function closeSettings(){
+    function closeSettings() {
       disableTrap();
-      if (settingsOverlay) { settingsOverlay.classList.remove('show'); setTimeout(()=>settingsOverlay.hidden = true, 200); }
-      if (settingsPanel)   { settingsPanel.classList.remove('show');   setTimeout(()=>settingsPanel.hidden = true, 200); }
-      try { document.body.style.overflow = ''; } catch(_) {}
-      try { if (_prevFocus && _prevFocus.focus) _prevFocus.focus(); } catch(_) {}
+      if (settingsOverlay) { settingsOverlay.classList.remove('show'); setTimeout(() => settingsOverlay.hidden = true, 200); }
+      if (settingsPanel) { settingsPanel.classList.remove('show'); setTimeout(() => settingsPanel.hidden = true, 200); }
+      try { document.body.style.overflow = ''; } catch (_) { }
+      try { if (_prevFocus && _prevFocus.focus) _prevFocus.focus(); } catch (_) { }
     }
-    if (settingsBtn)     settingsBtn.addEventListener('click', openSettings);
+
+
+    let transcript = '';
+    let recognitionRef = null;
+    let isListening = false;;
+    let micStream = null;
+
+    async function startListening() {
+      await ensureMicPrewarmed(); // 第一次点击自动预热
+
+      if (!recognitionRef) recognitionRef = createRecognition();
+      console.log('startListening', recognitionRef)
+
+      transcript = ''
+      if (recognitionRef && !isListening) {
+        startListeningButton.style.display = 'none';
+        stopListeningButton.style.display = '';
+
+        try {
+          recognitionRef.start();
+        } catch (error) {
+          startListeningButton.style.display = '';
+          stopListeningButton.style.display = 'none';
+          console.error('启动识别失败:', error)
+        }
+      }
+    }
+
+    // 停止语音识别
+    function stopListening() {
+      startListeningButton.style.display = '';
+      stopListeningButton.style.display = 'none';
+      console.log('stopListening...', isListening, recognitionRef)
+      if (recognitionRef && isListening) {
+        recognitionRef.stop()
+      }
+    }
+
+    function onHiddenTextEvent(){
+      document.body.classList.remove('retell');
+      document.body.classList.add('retell');
+      isHiddenText = true;
+      showTextButton.style.display = '';
+      hiddenTextButton.style.display = 'none';
+      
+    }
+
+    function onShowTextButton(){
+      document.body.classList.remove('retell');
+      isHiddenText = false;
+      showTextButton.style.display = 'none';
+      hiddenTextButton.style.display = '';
+    }
+
+    if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
     if (settingsOverlay) settingsOverlay.addEventListener('click', closeSettings);
-    if (settingsClose)   settingsClose.addEventListener('click', closeSettings);
-    if (settingsDone)    settingsDone.addEventListener('click', closeSettings);
+    if (settingsClose) settingsClose.addEventListener('click', closeSettings);
+    if (settingsDone) settingsDone.addEventListener('click', closeSettings);
+
+    if (startListeningButton) startListeningButton.addEventListener('click', startListening);
+    if (stopListeningButton) stopListeningButton.addEventListener('click', stopListening);
+    if (hiddenTextButton) hiddenTextButton.addEventListener('click', onHiddenTextEvent);
+    if (showTextButton) showTextButton.addEventListener('click', onShowTextButton);
+
+    
 
     // 快捷键帮助面板
     const shortcutsBtn = qs('#shortcutsToggle');
@@ -438,29 +670,29 @@
     const shortcutsClose = qs('#shortcutsClose');
     const shortcutsDone = qs('#shortcutsDone');
 
-    function openShortcuts(){
+    function openShortcuts() {
       // 先立即关闭设置面板,避免两个面板叠加显示
       if (settingsPanel && !settingsPanel.hidden) {
         disableTrap();
         if (settingsOverlay) { settingsOverlay.classList.remove('show'); settingsOverlay.hidden = true; }
         if (settingsPanel) { settingsPanel.classList.remove('show'); settingsPanel.hidden = true; }
-        try { document.body.style.overflow = ''; } catch(_) {}
+        try { document.body.style.overflow = ''; } catch (_) { }
       }
-      if (shortcutsOverlay) { shortcutsOverlay.hidden = false; requestAnimationFrame(()=>shortcutsOverlay.classList.add('show')); }
-      if (shortcutsPanel)   { shortcutsPanel.hidden = false;   requestAnimationFrame(()=>shortcutsPanel.classList.add('show')); }
-      try { _prevFocus = document.activeElement; } catch(_) {}
-      try { document.body.style.overflow = 'hidden'; } catch(_) {}
+      if (shortcutsOverlay) { shortcutsOverlay.hidden = false; requestAnimationFrame(() => shortcutsOverlay.classList.add('show')); }
+      if (shortcutsPanel) { shortcutsPanel.hidden = false; requestAnimationFrame(() => shortcutsPanel.classList.add('show')); }
+      try { _prevFocus = document.activeElement; } catch (_) { }
+      try { document.body.style.overflow = 'hidden'; } catch (_) { }
     }
-    function closeShortcuts(){
-      if (shortcutsOverlay) { shortcutsOverlay.classList.remove('show'); setTimeout(()=>shortcutsOverlay.hidden = true, 200); }
-      if (shortcutsPanel)   { shortcutsPanel.classList.remove('show');   setTimeout(()=>shortcutsPanel.hidden = true, 200); }
-      try { document.body.style.overflow = ''; } catch(_) {}
-      try { if (_prevFocus && _prevFocus.focus) _prevFocus.focus(); } catch(_) {}
+    function closeShortcuts() {
+      if (shortcutsOverlay) { shortcutsOverlay.classList.remove('show'); setTimeout(() => shortcutsOverlay.hidden = true, 200); }
+      if (shortcutsPanel) { shortcutsPanel.classList.remove('show'); setTimeout(() => shortcutsPanel.hidden = true, 200); }
+      try { document.body.style.overflow = ''; } catch (_) { }
+      try { if (_prevFocus && _prevFocus.focus) _prevFocus.focus(); } catch (_) { }
     }
-    if (shortcutsBtn)     shortcutsBtn.addEventListener('click', openShortcuts);
+    if (shortcutsBtn) shortcutsBtn.addEventListener('click', openShortcuts);
     if (shortcutsOverlay) shortcutsOverlay.addEventListener('click', closeShortcuts);
-    if (shortcutsClose)   shortcutsClose.addEventListener('click', closeShortcuts);
-    if (shortcutsDone)    shortcutsDone.addEventListener('click', closeShortcuts);
+    if (shortcutsClose) shortcutsClose.addEventListener('click', closeShortcuts);
+    if (shortcutsDone) shortcutsDone.addEventListener('click', closeShortcuts);
 
     // 快捷键面板"返回设置"按钮
     const shortcutsBack = qs('#shortcutsBack');
@@ -471,7 +703,7 @@
         // 立即关闭快捷键面板
         if (shortcutsOverlay) { shortcutsOverlay.classList.remove('show'); shortcutsOverlay.hidden = true; }
         if (shortcutsPanel) { shortcutsPanel.classList.remove('show'); shortcutsPanel.hidden = true; }
-        try { document.body.style.overflow = ''; } catch(_) {}
+        try { document.body.style.overflow = ''; } catch (_) { }
         // 立即打开设置面板
         openSettings();
       });
@@ -555,7 +787,7 @@
         e.preventDefault();
         const newVolume = Math.min(1, audio.volume + 0.1);
         audio.volume = newVolume;
-        try { localStorage.setItem('nce_volume', newVolume); } catch(_) {}
+        try { localStorage.setItem('nce_volume', newVolume); } catch (_) { }
         showVolumeToast(newVolume);
         return;
       }
@@ -565,7 +797,7 @@
         e.preventDefault();
         const newVolume = Math.max(0, audio.volume - 0.1);
         audio.volume = newVolume;
-        try { localStorage.setItem('nce_volume', newVolume); } catch(_) {}
+        try { localStorage.setItem('nce_volume', newVolume); } catch (_) { }
         showVolumeToast(newVolume);
         return;
       }
@@ -598,7 +830,7 @@
             playSegment(0, { manual: true });
           } else {
             const p = audio.play();
-            if (p && p.catch) p.catch(() => {});
+            if (p && p.catch) p.catch(() => { });
           }
         } else {
           audio.pause();
@@ -640,9 +872,9 @@
     });
 
     const settingsReset = qs('#settingsReset');
-    if (settingsReset){
-      settingsReset.addEventListener('click', ()=>{
-        try{ localStorage.setItem('audioPlaybackRate', DEFAULT_RATE); }catch(_){}
+    if (settingsReset) {
+      settingsReset.addEventListener('click', () => {
+        try { localStorage.setItem('audioPlaybackRate', DEFAULT_RATE); } catch (_) { }
         audio.playbackRate = DEFAULT_RATE;
         setReadMode('continuous'); setFollowMode(true); setAutoContinueMode('single');
         reflectReadMode(); reflectFollowMode(); reflectAutoContinueMode();
@@ -658,6 +890,7 @@
         <div class="sentence" data-idx="${i}">
           <div class="en">${it.en}</div>
           ${it.cn ? `<div class="cn">${it.cn}</div>` : ''}
+          <div class="score"></div>
         </div>
       `).join('');
       qs('#sentences').innerHTML = html;
@@ -696,7 +929,7 @@
     // --------------------------
     function clearAdvance() {
       if (segmentTimer) { clearTimeout(segmentTimer); segmentTimer = 0; }
-      if (segmentRaf)   { cancelAnimationFrame(segmentRaf); segmentRaf = 0; }
+      if (segmentRaf) { cancelAnimationFrame(segmentRaf); segmentRaf = 0; }
     }
     function guardAheadSec() {
       const r = Math.max(0.5, Math.min(3, audio.playbackRate || 1));
@@ -706,7 +939,7 @@
       return base + (r - 1) * slope;
     }
     const NEAR_WINDOW_MS = isIOSLike ? 160 : 120;
-    const MAX_CHUNK_MS   = 10000;
+    const MAX_CHUNK_MS = 10000;
 
     function scheduleAdvance() {
       clearAdvance(); isScheduling = false; scheduleTime = 0;
@@ -798,7 +1031,7 @@
     // --------------------------
     function fastSeekTo(t) {
       if (typeof audio.fastSeek === 'function') {
-        try { audio.fastSeek(t); } catch(_) { audio.currentTime = t; }
+        try { audio.fastSeek(t); } catch (_) { audio.currentTime = t; }
       } else {
         audio.currentTime = t;
       }
@@ -867,10 +1100,10 @@
         fastSeekTo(start);
       } else {
         // 点读/初次播放：暂停→seek→seeked 后 play（不使用固定延时）
-        try { internalPause = true; audio.pause(); } catch(_) {}
+        try { internalPause = true; audio.pause(); } catch (_) { }
         const resume = () => {
           audio.removeEventListener('seeked', resume);
-          const p = audio.play(); if (p && p.catch) p.catch(()=>{});
+          const p = audio.play(); if (p && p.catch) p.catch(() => { });
           raf2(() => scheduleAdvance());
         };
         audio.addEventListener('seeked', resume, { once: true });
@@ -882,22 +1115,29 @@
     // 高亮 & 跟随
     // --------------------------
     let scrollTimer = 0;
-    function scheduleScrollTo(el, manual){
+    function scheduleScrollTo(el, manual) {
       if (!el) return;
       if (scrollTimer) { clearTimeout(scrollTimer); scrollTimer = 0; }
       if (!autoFollow) return;
-      if (manual) { try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(_) {} return; }
-      scrollTimer = setTimeout(() => { try { el.scrollIntoView({ behavior: 'auto', block: 'center' }); } catch(_) {} }, 420);
+      if (manual) { try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { } return; }
+      scrollTimer = setTimeout(() => { try { el.scrollIntoView({ behavior: 'auto', block: 'center' }); } catch (_) { } }, 420);
     }
-    function highlight(i, manual=false) {
+    function highlight(i, manual = false) {
       const prev = listEl.querySelector('.sentence.active'); if (prev) prev.classList.remove('active');
       const cur = listEl.querySelector(`.sentence[data-idx="${i}"]`);
-      if (cur) { cur.classList.add('active'); scheduleScrollTo(cur, manual); }
+      if (cur) { 
+        cur.classList.add('active'); scheduleScrollTo(cur, manual);  selectedSentence = cur;
+      }else{
+        selectedSentence = null;
+      }
     }
     listEl.addEventListener('click', e => {
       const s = e.target.closest('.sentence'); if (!s) return;
       // 确保“首次点句”也能触发 iOS 解锁
       if (isIOSLike && !iosUnlocked) unlockAudioSync();
+    
+      if (recognitionRef && isListening) stopListening();
+
       playSegment(parseInt(s.dataset.idx, 10), { manual: true });
     });
 
@@ -1005,7 +1245,7 @@
         z-index: 1000; backdrop-filter: saturate(120%) blur(10px); animation: slideDown 0.3s ease-out;
       `;
       n.textContent = message; document.body.appendChild(n);
-      setTimeout(()=>{ n.style.animation='slideUp 0.3s ease-out'; setTimeout(()=>{ document.body.removeChild(n); },300); },2000);
+      setTimeout(() => { n.style.animation = 'slideUp 0.3s ease-out'; setTimeout(() => { document.body.removeChild(n); }, 300); }, 2000);
     }
     async function autoNextLesson() {
       const nextLesson = await getNextLesson(book, base);
@@ -1019,7 +1259,7 @@
             const map = JSON.parse(localStorage.getItem(LASTPOS_KEY) || '{}');
             map[nextId] = { t: 0, idx: 0, ts: Date.now() };
             localStorage.setItem(LASTPOS_KEY, JSON.stringify(map));
-          } catch(_) {}
+          } catch (_) { }
           window.location.href = `lesson.html#${book}/${nextLesson.filename}`;
         }, 2000);
       } else {
@@ -1058,15 +1298,15 @@
       if (!isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
         audio.volume = savedVolume;
       }
-    } catch(_) {}
+    } catch (_) { }
 
     // 重要：iOS 上尽早设定 preload，有助于更快拿到 metadata
-    try { audio.preload = 'auto'; } catch(_) {}
+    try { audio.preload = 'auto'; } catch (_) { }
     audio.src = mp3;
-    try { audio.load(); } catch(_) {}
+    try { audio.load(); } catch (_) { }
 
     if (window.NCE_APP && typeof NCE_APP.initSegmented === 'function') {
-      try { NCE_APP.initSegmented(document); } catch(_) {}
+      try { NCE_APP.initSegmented(document); } catch (_) { }
     }
 
     resolveLessonNeighbors();
@@ -1086,23 +1326,103 @@
     }
     audio.addEventListener('loadedmetadata', () => { metadataReady = true; adjustLastEndIfPossible(); });
 
-    function lessonId(){ return `${book}/${base}`; }
-    function touchRecent(){
-      try{
+    function lessonId() { return `${book}/${base}`; }
+    function touchRecent() {
+      try {
         const id = lessonId(); const now = Date.now();
-        const raw = JSON.parse(localStorage.getItem(RECENT_KEY)||'[]');
-        const rest = raw.filter(x=>x && x.id !== id);
+        const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+        const rest = raw.filter(x => x && x.id !== id);
         const next = [{ id, ts: now }, ...rest].slice(0, 60);
         localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-      }catch(_){}
+      } catch (_) { }
     }
-    function saveLastPos(){
-      try{
+    function saveLastPos() {
+      try {
         const id = lessonId(); const now = Date.now();
-        const map = JSON.parse(localStorage.getItem(LASTPOS_KEY)||'{}');
-        map[id] = { t: Math.max(0, audio.currentTime||0), idx: Math.max(0, idx|0), ts: now };
+        const map = JSON.parse(localStorage.getItem(LASTPOS_KEY) || '{}');
+        map[id] = { t: Math.max(0, audio.currentTime || 0), idx: Math.max(0, idx | 0), ts: now };
         localStorage.setItem(LASTPOS_KEY, JSON.stringify(map));
-      }catch(_){}
+      } catch (_) { }
+    }
+
+    async function ensureMicPrewarmed() {
+      stopListeningButton.style.display = 'none';
+
+      if (micStream) return;
+      try {
+        // statusEl.textContent = '正在预热麦克风...';
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // 创建静音 AudioContext 保持活跃
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const src = ctx.createMediaStreamSource(micStream);
+        const gain = ctx.createGain();
+        gain.gain.value = 0;
+        src.connect(gain);
+        gain.connect(ctx.destination);
+        micStream._ctx = ctx;
+        // statusEl.textContent = '麦克风已预热。';
+      } catch (err) {
+        // statusEl.textContent = '麦克风预热失败：' + err.message;
+        console.error(err);
+      }
+    }
+
+    function createRecognition() {
+      const r = new SpeechRecognition();
+      r.lang = 'en-US';
+      r.interimResults = true;
+      r.continuous = true;
+
+      r.onstart = () => {
+        isListening = true;
+        // statusEl.textContent = '状态：识别中...';
+        // startBtn.disabled = true;
+        // stopBtn.disabled = false;
+        // interimEl.textContent = '';
+      };
+      r.onend = () => {
+        isListening = false;
+        // statusEl.textContent = '状态：已停止';
+        // startBtn.disabled = false;
+        // stopBtn.disabled = true;
+        // interimEl.textContent = '';
+      };
+      r.onerror = (e) => {
+        isListening = false;
+        // statusEl.textContent = `错误：${e.error}`;
+        console.error(e);
+      };
+      r.onresult = (e) => {
+        let interim = '';
+        let finalTranscript = ''
+
+        for (let i = e.resultIndex; i < e.results.length; ++i) {
+          const res = e.results[i];
+          const text = res[0].transcript.trim();
+          if (res.isFinal) {
+            finalTranscript += text
+          }
+        }
+
+        if (finalTranscript) {
+          transcript = transcript ? transcript + " " + finalTranscript : finalTranscript;
+
+          // 与当前句子进行匹配
+          if (idx >= 0 && idx < items.length) {
+            const currentSentence = items[idx].en;
+            const matchResult = matchText(currentSentence, transcript);
+
+            // 显示匹配结果
+            // showMatchResult(matchResult, transcript);
+            if(matchResult && selectedSentence) 
+              selectedSentence.querySelector(".score").innerHTML = matchResult.matchScore + '分'
+
+          }
+
+          // interimEl.textContent = transcript;
+        }
+      };
+      return r;
     }
 
     loadLrc(lrc).then(({ meta, items: arr }) => {
@@ -1114,31 +1434,52 @@
       adjustLastEndIfPossible();
 
       // 从上一课或首页跳转来的自动恢复
-      try{
+      try {
         const resumeId = sessionStorage.getItem('nce_resume');
-        if (resumeId && resumeId === lessonId()){
-          const map = JSON.parse(localStorage.getItem(LASTPOS_KEY)||'{}');
+        if (resumeId && resumeId === lessonId()) {
+          const map = JSON.parse(localStorage.getItem(LASTPOS_KEY) || '{}');
           const pos = map[resumeId];
-          if (pos){
-            const targetIdx = (Number.isInteger(pos.idx) && pos.idx>=0 && pos.idx<items.length) ? pos.idx : 0;
+          if (pos) {
+            const targetIdx = (Number.isInteger(pos.idx) && pos.idx >= 0 && pos.idx < items.length) ? pos.idx : 0;
             audio.currentTime = Math.max(0, pos.t || 0);
             idx = targetIdx; segmentEnd = endFor(items[targetIdx]);
             highlight(targetIdx, false);
-            if (sessionStorage.getItem('nce_resume_play')==='1'){
-              const p = audio.play(); if (p && p.catch) p.catch(()=>{});
+            if (sessionStorage.getItem('nce_resume_play') === '1') {
+              const p = audio.play(); if (p && p.catch) p.catch(() => { });
               scheduleAdvance();
             }
           }
         }
-      }catch(_){}
+      } catch (_) { }
       sessionStorage.removeItem('nce_resume');
       sessionStorage.removeItem('nce_resume_play');
+
     }).catch(err => {
       titleEl.textContent = '无法加载课文';
       subEl.textContent = String(err);
     });
 
-    window.addEventListener('beforeunload', ()=>{ saveLastPos(); });
+    // ensureMicPrewarmed()
+    // console.log('readMode',readMode)
+
+    function setRecordingControl(mode){
+      if(mode === 'single'){
+        recordingControl.style.display = '';
+        // document.body.classList.remove('resell'); 
+        // document.body.classList.add('resell');
+      }else{
+        recordingControl.style.display = 'none';
+        // document.body.classList.remove('resell'); 
+      }
+    }
+    
+    setRecordingControl(readMode)
+
+    stopListeningButton.style.display = 'none';
+    showTextButton.style.display = 'none';
+
+    
+    window.addEventListener('beforeunload', () => { saveLastPos(); });
     window.addEventListener('hashchange', () => { window.scrollTo(0, 0); location.reload(); });
   });
 })();

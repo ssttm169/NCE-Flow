@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>简单语音识别 Demo</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding: 20px; max-width: 720px; margin: auto; }
+    h1 { font-size: 1.4rem; margin-bottom: 8px; }
+    .controls { display:flex; gap:10px; align-items:center; margin-bottom:12px; }
+    button { padding:8px 12px; border-radius:8px; border:1px solid #ccc; background:#fff; cursor:pointer; }
+    button.primary { background:#007bff; color:#fff; border-color:#007bff; }
+    button.danger { background:#dc3545; color:#fff; border-color:#dc3545; }
+    .box { border:1px dashed #ddd; padding:12px; border-radius:8px; margin-bottom:10px; min-height:56px; }
+    .interim { color:#777; font-style:italic; }
+    ul.transcripts { padding-left: 18px; }
+    .meta { font-size:0.9rem; color:#666; margin-top:6px; }
+    .hint { font-size:0.9rem; color:#444; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <h1>HTML5 语音识别（Web Speech API）示例</h1>
+
+  <div class="controls">
+    <select id="lang">
+      <option value="zh-CN" selected>中文（zh-CN）</option>
+      <option value="en-US">English (en-US)</option>
+      <option value="ja-JP">日本語 (ja-JP)</option>
+      <!-- 需要其它语言可以追加 -->
+    </select>
+
+    <button id="prewarm">预热麦克风 (减少首次延迟)</button>
+    <button id="start" class="primary">开始识别</button>
+    <button id="stop" class="danger" disabled>停止识别</button>
+  </div>
+
+  <div class="box">
+    <div><strong>临时识别（中间结果）:</strong></div>
+    <div id="interim" class="interim"></div>
+  </div>
+
+  <div class="box">
+    <div><strong>最终识别结果：</strong></div>
+    <ul id="results" class="transcripts"></ul>
+  </div>
+
+  <div class="meta" id="status">状态：已就绪</div>
+  <div class="hint">
+    Tip: 使用 Chrome/Edge 效果最佳。首次使用会请求麦克风权限。点击“预热麦克风”可提前激活麦克风并减少开始识别时的延迟或权限弹窗带来的停顿。
+  </div>
+
+  <script>
+  (function(){
+    // 兼容性处理
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const startBtn = document.getElementById('start');
+    const stopBtn = document.getElementById('stop');
+    const interimEl = document.getElementById('interim');
+    const resultsEl = document.getElementById('results');
+    const statusEl = document.getElementById('status');
+    const langSelect = document.getElementById('lang');
+    const prewarmBtn = document.getElementById('prewarm');
+
+    let recognition = null;
+    let micStream = null; // 用于 getUserMedia 预热
+
+    if (!SpeechRecognition) {
+      statusEl.textContent = '错误：当前浏览器不支持 Web Speech API（SpeechRecognition）。请使用 Chrome 或 Edge。';
+      startBtn.disabled = true;
+      stopBtn.disabled = true;
+      prewarmBtn.disabled = true;
+      return;
+    }
+
+    function createRecognition() {
+      const r = new SpeechRecognition();
+      r.lang = langSelect.value || 'zh-CN';
+      r.interimResults = true;   // 打开中间结果
+      r.continuous = true;       // 连续识别（注意浏览器实现差别）
+      r.maxAlternatives = 1;
+      // 事件绑定
+      r.onstart = () => {
+        statusEl.textContent = '状态：识别中...';
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+      };
+      r.onend = () => {
+        statusEl.textContent = '状态：已停止';
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        interimEl.textContent = '';
+      };
+      r.onerror = (ev) => {
+        console.warn('SpeechRecognition error', ev);
+        statusEl.textContent = `错误：${ev.error} ${ev.message || ''}`;
+      };
+      r.onresult = (ev) => {
+        // ev.results 是一个类似二维结构：resultIndex -> alternatives
+        let interimTranscript = '';
+        for (let i = ev.resultIndex; i < ev.results.length; ++i) {
+          const res = ev.results[i];
+          const text = res[0].transcript.trim();
+          if (res.isFinal) {
+            // 添加到最终结果列表
+            const li = document.createElement('li');
+            li.textContent = text + (res[0].confidence != null ? ` （置信度: ${Math.round(res[0].confidence * 100)}%）` : '');
+            resultsEl.insertBefore(li, resultsEl.firstChild);
+          } else {
+            interimTranscript += text + ' ';
+          }
+        }
+        interimEl.textContent = interimTranscript;
+      };
+      return r;
+    }
+
+    function ensureRecognition() {
+      if (!recognition) recognition = createRecognition();
+      // 每次切换语言时也要更新 recognition.lang
+      recognition.lang = langSelect.value;
+      return recognition;
+    }
+
+    // Start / Stop handlers
+    startBtn.addEventListener('click', () => {
+      try {
+        ensureRecognition().start();
+      } catch (e) {
+        // 有时连续多次 start 会抛错，这里处理为重建实例再试
+        console.warn('start error, recreating recognition', e);
+        recognition && (recognition.onend = null, recognition.onerror = null);
+        recognition = createRecognition();
+        recognition.start();
+      }
+    });
+
+    stopBtn.addEventListener('click', () => {
+      if (recognition) recognition.stop();
+      // 如果你有预热的 micStream，可以选择不关闭以保持权限通道
+    });
+
+    langSelect.addEventListener('change', () => {
+      statusEl.textContent = `语言切换为 ${langSelect.value}`;
+      // 如果在识别中，重启 recognition 以应用新语言
+      if (recognition) {
+        try { recognition.abort(); } catch(e) {}
+        recognition = createRecognition();
+      }
+    });
+
+    // 预热麦克风：用 getUserMedia 获取麦克风权限并保持流活跃，能减少首次 start 的延迟/卡顿
+    prewarmBtn.addEventListener('click', async () => {
+      if (micStream) {
+        statusEl.textContent = '麦克风已预热并处于打开状态。';
+        return;
+      }
+      try {
+        statusEl.textContent = '请求麦克风权限...';
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // 创建一个静默的 AudioContext 连接以确保浏览器不会自动释放 mic
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const src = ctx.createMediaStreamSource(micStream);
+          const gain = ctx.createGain();
+          gain.gain.value = 0; // 静音
+          src.connect(gain);
+          gain.connect(ctx.destination); // 保持链路活跃
+          // 存下 ctx 以便未来关闭（如果需要）
+          micStream._audioContext = ctx;
+        } catch(e) {
+          // 某些环境无法创建 AudioContext，仍然保留 micStream
+        }
+        statusEl.textContent = '麦克风已预热，首次识别延迟会更小。';
+      } catch (err) {
+        console.error('getUserMedia error', err);
+        statusEl.textContent = '请求麦克风失败：' + (err.message || err.name);
+      }
+    });
+
+    // 页面卸载时清理
+    window.addEventListener('beforeunload', () => {
+      if (recognition) {
+        try { recognition.stop(); } catch(e) {}
+      }
+      if (micStream) {
+        try {
+          const tracks = micStream.getTracks();
+          tracks.forEach(t => t.stop());
+          if (micStream._audioContext) {
+            try { micStream._audioContext.close(); } catch(e) {}
+          }
+        } catch(e) {}
+      }
+    });
+
+    // 初始创建（可选预热行为）
+    // recognition = createRecognition();
+  })();
+  </script>
+</body>
+</html>
