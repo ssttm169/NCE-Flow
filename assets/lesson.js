@@ -223,6 +223,8 @@
   const ua = navigator.userAgent || '';
   const isIOSLike = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
 
+  const isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+
   // --------------------------
   // 主流程
   // --------------------------
@@ -261,6 +263,10 @@
     let selectedSentence = null;
     let isHiddenText = false;
 
+    let ws;
+    let micStream;
+    let audioContext;
+    let processor;
 
     // 本地存储键
     const RECENT_KEY = 'nce_recents';
@@ -602,9 +608,8 @@
     let transcript = '';
     let recognitionRef = null;
     let isListening = false;;
-    let micStream = null;
 
-    async function startListening() {
+    async function pcReccording(){
       await ensureMicPrewarmed(); // 第一次点击自动预热
 
       if (!recognitionRef) recognitionRef = createRecognition();
@@ -625,13 +630,109 @@
       }
     }
 
+
+
+    async function wsRecording () {
+      startListeningButton.style.display = 'none';
+      stopListeningButton.style.display = '';
+      // output.innerText = "🎤 Connecting...";
+
+      ws = new WebSocket("ws://198.20.133.17:8080");
+      // ws = new WebSocket("ws://stt.chicklish.app");
+      ws.binaryType = "arraybuffer";
+
+      ws.onopen = async () => {
+        // output.innerText = "✅ Connected. Start speaking...";
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        audioContext = new AudioContext({ sampleRate: 16000 });
+        const source = audioContext.createMediaStreamSource(micStream);
+        processor = audioContext.createScriptProcessor(4096, 1, 1);
+        source.connect(processor);
+        processor.connect(audioContext.destination);
+
+        processor.onaudioprocess = (e) => {
+          const input = e.inputBuffer.getChannelData(0);
+          const buffer = new Int16Array(input.length);
+          for (let i = 0; i < input.length; i++) buffer[i] = input[i] * 0x7FFF;
+          if (ws.readyState === WebSocket.OPEN) ws.send(buffer);
+        };
+        isListening = true;
+
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log('data',data)
+        if (data.text) {
+          transcript = data.text;
+            // console.log('data.text',data.text)
+          // output.innerText = "🗣️ Final: " + data.text;
+        } else if (data.partial) {
+          transcript =  data.partial;
+          // output.innerText = "Listening: " + data.partial;
+        }
+      };
+
+      ws.onclose = () => {
+        isListening = false;
+        // output.innerText = "🔴 Disconnected.";
+          // 与当前句子进行匹配
+          if (idx >= 0 && idx < items.length) {
+            const currentSentence = items[idx].en;
+            console.log('transcript',transcript)
+            const matchResult = matchText(currentSentence, transcript);
+
+            // 显示匹配结果
+            // showMatchResult(matchResult, transcript);
+            if(matchResult && selectedSentence) 
+              selectedSentence.querySelector(".score").innerHTML = matchResult.matchScore + '分'
+          }
+      };
+    };
+
+    function stopWsRecording() {
+      // 停止麦克风采集
+      if (processor) {
+        processor.disconnect();
+        processor.onaudioprocess = null;
+        processor = null;
+      }
+      if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+      }
+      if (micStream) {
+        micStream.getTracks().forEach(track => track.stop());
+        micStream = null;
+      }
+      // 关闭 WebSocket 连接
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+      // output.innerText = "🛑 Stopped recording.";
+    }
+
+
+    async function startListening() {
+      if(isMobile){
+        wsRecording()
+      }else{
+        pcReccording()
+      }
+    }
+
+
     // 停止语音识别
     function stopListening() {
       startListeningButton.style.display = '';
       stopListeningButton.style.display = 'none';
       console.log('stopListening...', isListening, recognitionRef)
-      if (recognitionRef && isListening) {
-        recognitionRef.stop()
+
+      if(isMobile){
+        stopWsRecording()
+      }else{
+        if (recognitionRef && isListening) recognitionRef.stop()
       }
     }
 
