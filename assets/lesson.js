@@ -265,8 +265,11 @@
 
     let ws;
     let micStream;
-    let audioContext;
-    let processor;
+    let wsReady = false;
+    let audioContext = null;
+    let processor = null;
+    let matchTimer = null;
+    let currentRecordingIndex = 0;
 
     // 本地存储键
     const RECENT_KEY = 'nce_recents';
@@ -631,20 +634,61 @@
     }
 
 
+    async function initWebSocket() {
+      return new Promise((resolve, reject) => {
+        if (ws) return resolve(ws); // 已初始化
+
+        // ws = new WebSocket("ws://localhost:8080");
+        // ws = new WebSocket("ws://198.20.133.17:8080");
+        // ws = new WebSocket("ws://198.20.133.17:2052");
+        ws = new WebSocket("wss://stt.chicklish.app");
+        ws.binaryType = "arraybuffer";
+
+        ws.onopen = () => {
+          wsReady = true;
+          // output.innerText = "✅ Connected to server.";
+          resolve(ws);
+        };
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          console.log('data',data)
+          if (data.text) {
+            transcript = data.text;
+            // output.innerText = "🗣️ Final: " + data.text;
+          } else if (data.partial) {
+            transcript =  data.partial;
+            // output.innerText = "Listening: " + data.partial;
+          }
+          clearTimeout(matchTimer)
+          matchTimer = setTimeout(finalMatchMessage, 1000)
+
+        };
+
+        ws.onclose = () => {
+          wsReady = false;
+          // output.innerText = "🔴 Disconnected from server.";
+        };
+
+        ws.onerror = (err) => {
+          console.error("WebSocket error:", err);
+          reject(err);
+        };
+      });
+    }
+
 
     async function wsRecording () {
       startListeningButton.style.display = 'none';
       stopListeningButton.style.display = '';
-      // output.innerText = "🎤 Connecting...";
 
-      ws = new WebSocket("ws://198.20.133.17:8080");
-      // ws = new WebSocket("ws://stt.chicklish.app");
-      ws.binaryType = "arraybuffer";
 
-      ws.onopen = async () => {
-        // output.innerText = "✅ Connected. Start speaking...";
+      // 初始化 WebSocket（只会执行一次）
+      await initWebSocket();
+
+      // 打开麦克风
+      if (!micStream) {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
         audioContext = new AudioContext({ sampleRate: 16000 });
         const source = audioContext.createMediaStreamSource(micStream);
         processor = audioContext.createScriptProcessor(4096, 1, 1);
@@ -652,69 +696,103 @@
         processor.connect(audioContext.destination);
 
         processor.onaudioprocess = (e) => {
+          if (!wsReady) return;
           const input = e.inputBuffer.getChannelData(0);
           const buffer = new Int16Array(input.length);
           for (let i = 0; i < input.length; i++) buffer[i] = input[i] * 0x7FFF;
-          if (ws.readyState === WebSocket.OPEN) ws.send(buffer);
+          ws.send(buffer);
         };
-        isListening = true;
+      }
 
-      };
+      // output.innerText = "🎤 Connecting...";
 
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log('data',data)
-        if (data.text) {
-          transcript = data.text;
-            // console.log('data.text',data.text)
-          // output.innerText = "🗣️ Final: " + data.text;
-        } else if (data.partial) {
-          transcript =  data.partial;
-          // output.innerText = "Listening: " + data.partial;
-        }
-      };
+      // ws = new WebSocket("ws://198.20.133.17:8080");
+      // ws = new WebSocket("wss://stt.chicklish.app");
+      // ws.binaryType = "arraybuffer";
 
-      ws.onclose = () => {
-        isListening = false;
-        // output.innerText = "🔴 Disconnected.";
-          // 与当前句子进行匹配
-          if (idx >= 0 && idx < items.length) {
-            const currentSentence = items[idx].en;
-            console.log('transcript',transcript)
-            const matchResult = matchText(currentSentence, transcript);
+      // ws.onopen = async () => {
+      //   // output.innerText = "✅ Connected. Start speaking...";
+      //   micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-            // 显示匹配结果
-            // showMatchResult(matchResult, transcript);
-            if(matchResult && selectedSentence) 
-              selectedSentence.querySelector(".score").innerHTML = matchResult.matchScore + '分'
-          }
-      };
+      //   audioContext = new AudioContext({ sampleRate: 16000 });
+      //   const source = audioContext.createMediaStreamSource(micStream);
+      //   processor = audioContext.createScriptProcessor(4096, 1, 1);
+      //   source.connect(processor);
+      //   processor.connect(audioContext.destination);
+
+      //   processor.onaudioprocess = (e) => {
+      //     const input = e.inputBuffer.getChannelData(0);
+      //     const buffer = new Int16Array(input.length);
+      //     for (let i = 0; i < input.length; i++) buffer[i] = input[i] * 0x7FFF;
+      //     if (ws.readyState === WebSocket.OPEN) ws.send(buffer);
+      //   };
+      //   isListening = true;
+
+      // };
+
+      // ws.onmessage = (event) => {
+      //   const data = JSON.parse(event.data);
+      //   console.log('data',data)
+      //   if (data.text) {
+      //     transcript = data.text;
+      //       // console.log('data.text',data.text)
+      //     // output.innerText = "🗣️ Final: " + data.text;
+      //   } else if (data.partial) {
+      //     transcript =  data.partial;
+      //     // output.innerText = "Listening: " + data.partial;
+      //   }
+      // };
+
+      // ws.onclose = () => {
+      //   isListening = false;
+      //   // output.innerText = "🔴 Disconnected.";
+      //     // 与当前句子进行匹配
+      //     if (idx >= 0 && idx < items.length) {
+      //       const currentSentence = items[idx].en;
+      //       console.log('transcript',transcript)
+      //       const matchResult = matchText(currentSentence, transcript);
+
+      //       // 显示匹配结果
+      //       // showMatchResult(matchResult, transcript);
+      //       if(matchResult && selectedSentence) 
+      //         selectedSentence.querySelector(".score").innerHTML = matchResult.matchScore + '分'
+      //     }
+      // };
     };
 
-    function stopWsRecording() {
-      // 停止麦克风采集
-      if (processor) {
-        processor.disconnect();
-        processor.onaudioprocess = null;
-        processor = null;
-      }
-      if (audioContext) {
-        audioContext.close();
-        audioContext = null;
-      }
-      if (micStream) {
-        micStream.getTracks().forEach(track => track.stop());
-        micStream = null;
-      }
-      // 关闭 WebSocket 连接
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.close();
-      }
+    function stopWsRecording( ) {
+
+      if (processor) processor.disconnect();
+      if (audioContext) audioContext.close();
+      if (micStream) micStream.getTracks().forEach(track => track.stop());
+
+      processor = null;
+      audioContext = null;
+      micStream = null;
       // output.innerText = "🛑 Stopped recording.";
+
+    }
+
+    function finalMatchMessage(){
+      if(!transcript) return;
+      let currentS
+      if (currentRecordingIndex >= 0 && currentRecordingIndex < items.length) {
+
+        const currentSentence = items[currentRecordingIndex].en;
+        const matchResult = matchText(currentSentence, transcript);
+        currentS = listEl.querySelector(`.sentence[data-idx="${currentRecordingIndex}"]`);
+
+        // 显示匹配结果
+        // showMatchResult(matchResult, transcript);
+        if(matchResult && currentS) 
+          currentS.querySelector(".score").innerHTML = matchResult.matchScore + '分'
+      }
     }
 
 
     async function startListening() {
+      currentRecordingIndex = idx
+      console.log('currentRecordingIndex.startListening=',idx )
       if(isMobile){
         wsRecording()
       }else{
@@ -724,13 +802,17 @@
 
 
     // 停止语音识别
-    function stopListening() {
+    function stopListening(isMatchMessage = true ) {
       startListeningButton.style.display = '';
       stopListeningButton.style.display = 'none';
       console.log('stopListening...', isListening, recognitionRef)
 
       if(isMobile){
         stopWsRecording()
+        if(isMatchMessage){
+          clearTimeout(matchTimer)
+          matchTimer = setTimeout(finalMatchMessage, 1000)
+        }
       }else{
         if (recognitionRef && isListening) recognitionRef.stop()
       }
@@ -1237,7 +1319,8 @@
       // 确保“首次点句”也能触发 iOS 解锁
       if (isIOSLike && !iosUnlocked) unlockAudioSync();
     
-      if (recognitionRef && isListening) stopListening();
+      
+      stopListening(false);
 
       playSegment(parseInt(s.dataset.idx, 10), { manual: true });
     });
@@ -1580,7 +1663,10 @@
     showTextButton.style.display = 'none';
 
     
-    window.addEventListener('beforeunload', () => { saveLastPos(); });
+    window.addEventListener('beforeunload', () => { 
+      saveLastPos();
+      if (ws && ws.readyState === WebSocket.OPEN) ws.close();
+     });
     window.addEventListener('hashchange', () => { window.scrollTo(0, 0); location.reload(); });
   });
 })();
